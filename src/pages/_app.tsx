@@ -12,6 +12,7 @@ import React, { useMemo } from 'react';
 require('@solana/wallet-adapter-react-ui/styles.css');
 require('../styles/globals.css');
 
+export const ELEMENTERRA_PROGRAM_ID = 'ELEMisgsfkmp58w1byRvrdpGG1HcapQoCrmMJeorBCxq';
 export const ELEMENTERRA_CREATORS = [
     'B9G4GndCu93zFXxyeA6nbWhBHDAdL8ACwxeCL6wMXycZ',
     '4oZFNzopnabpEFz1TM2j3B4EasPGVcBzaVea2Qp1h2Ep',

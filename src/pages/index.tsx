@@ -1,43 +1,41 @@
 import { Metaplex, PublicKey } from '@metaplex-foundation/js';
+import { Refresh } from '@mui/icons-material';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { Connection } from '@solana/web3.js';
 import { DAS, Helius } from 'helius-sdk';
+import _ from 'lodash';
 import type { NextPage } from 'next';
 import dynamic from 'next/dynamic';
 import Head from 'next/head';
-import { useEffect, useState } from 'react';
-import _ from 'lodash';
-import { Diversity1, Refresh } from '@mui/icons-material';
-
-import { Crystal } from '../app/components/Crystal';
-import { Nft } from '../app/components/Nft';
-import styles from '../styles/Home.module.css';
+import { useCallback, useEffect, useState } from 'react';
 import {
-    ELEMENTERRA_CRYSTALS_COLLECTION,
-    ELEMENTERRA_ELEMENTS_COLLECTION,
-    ELEMENTERRA_RABBITS_COLLECTION,
-} from './_app';
-import { CRYSTALS_ELE_PER_HOUR, RABBITS_ELE_PER_HOUR } from '../lib/constants';
-import {
+    AppBar,
+    Box,
+    FormControl,
+    IconButton,
     InputLabel,
+    MenuItem,
     Paper,
+    Select,
+    SelectChangeEvent,
     Table,
     TableBody,
     TableCell,
     TableContainer,
     TableHead,
     TableRow,
-    FormControl,
-    MenuItem,
-    Select,
-    SelectChangeEvent,
-    Box,
-    Container,
-    IconButton,
     TextField,
-    TableFooter,
-    AppBar,
 } from '@mui/material';
+
+import { CRYSTALS_ELE_PER_HOUR, RABBITS_ELE_PER_HOUR } from '../lib/constants';
+import styles from '../styles/Home.module.css';
+import {
+    ELEMENTERRA_CRYSTALS_COLLECTION,
+    ELEMENTERRA_ELEMENTS_COLLECTION,
+    ELEMENTERRA_RABBITS_COLLECTION,
+} from './_app';
+import { RabbitsTable } from '../app/components/RabbitsTable';
+import { CrystalsTable } from '../app/components/CrystalsTable';
 
 const WalletDisconnectButtonDynamic = dynamic(
     async () => (await import('@solana/wallet-adapter-react-ui')).WalletDisconnectButton,
@@ -50,6 +48,7 @@ const WalletMultiButtonDynamic = dynamic(
 
 export type Stakable = {
     nft: DAS.GetAssetResponse;
+    level: string;
     elePerHour: number;
 };
 
@@ -87,13 +86,31 @@ const Home: NextPage = () => {
         setEleUsdcPrice(body.data.ELE.price);
     };
 
-    const fetchNft = async () => {
+    async function getRabbitLevel(rabbit: DAS.GetAssetResponse): Promise<number> {
+        const metadataAddress = metaplex
+            .nfts()
+            .pdas()
+            .metadata({ mint: new PublicKey(rabbit.id) })
+            .toString();
+        const url = `https://api.helius.xyz/v0/addresses/${metadataAddress}/transactions?api-key=${process.env.NEXT_PUBLIC_HELIUS_API_KEY}&type=COMPRESSED_NFT_BURN`;
+        const res = await fetch(url, {
+            method: 'GET',
+            headers: {
+                'content-type': 'application/json',
+            },
+        });
+        const data = await res.json();
+        return data.length;
+    }
+
+    const fetchNft = useCallback(async () => {
         setPageErrors('');
         if (walletAddress) {
             try {
                 const assets = await helius.rpc.getAssetsByOwner({
                     ownerAddress: walletAddress,
                     page: 1,
+                    // limit: 100,
                 });
 
                 const unburnt = assets.items.filter((item) => !item.burnt);
@@ -101,16 +118,19 @@ const Home: NextPage = () => {
                 const rabbitsRes = unburnt.filter(
                     (item) => _.first(item.grouping)?.group_value == ELEMENTERRA_RABBITS_COLLECTION
                 );
+
+                const rabbitLevels = await Promise.all(rabbitsRes.map((rabbit) => getRabbitLevel(rabbit)));
+
                 let rabbitsElePerHour = 0;
-                const rabbits = rabbitsRes.map((res) => {
-                    const level = '17'; // TODO: get level from blockchain
-                    const elePerHour = RABBITS_ELE_PER_HOUR[level];
-                    rabbitsElePerHour += elePerHour;
-                    return {
-                        nft: res,
-                        elePerHour,
-                    };
-                });
+                const rabbits = [];
+                for (const [res, lvl] of _.zip(rabbitsRes, rabbitLevels)) {
+                    if (!_.isNil(res) && !_.isNil(lvl)) {
+                        const level = lvl.toString();
+                        const elePerHour = RABBITS_ELE_PER_HOUR[level];
+                        rabbitsElePerHour += elePerHour;
+                        rabbits.push({ nft: res, level, elePerHour });
+                    }
+                }
 
                 const crystalsRes = unburnt.filter(
                     (item) => _.first(item.grouping)?.group_value == ELEMENTERRA_CRYSTALS_COLLECTION
@@ -122,6 +142,7 @@ const Home: NextPage = () => {
                     crystalsElePerHour += elePerHour;
                     return {
                         nft: res,
+                        level,
                         elePerHour,
                     };
                 });
@@ -142,7 +163,7 @@ const Home: NextPage = () => {
                 setCrystalsElePerHour(0);
             }
         }
-    };
+    }, [walletAddress]);
 
     useEffect(() => {
         fetchEleSolPrice();
@@ -154,11 +175,11 @@ const Home: NextPage = () => {
             setWalletAddress(wallet.publicKey?.toString());
             fetchNft();
         }
-    }, [wallet.connected]);
+    }, [fetchNft, wallet.publicKey, wallet.connected]);
 
     useEffect(() => {
         fetchNft();
-    }, [walletAddress]);
+    }, [fetchNft, walletAddress]);
 
     async function refreshAll() {
         await fetchEleSolPrice();
@@ -224,23 +245,23 @@ const Home: NextPage = () => {
                 <link rel="icon" href="/favicon.ico" />
             </Head>
 
-            <main className={styles.main}>
-                <AppBar position="static">
-                    <div className={styles.Header}>
-                        <div className={styles.globalStats}>
-                            <p>ELE/SOL: {_.round(eleSolPrice, 8)} SOL</p>
-                            <p>ELE/USDC: {_.round(eleUsdcPrice, 8)} USDC</p>
-                        </div>
-                        <div className={styles.walletButtons}>
-                            <WalletMultiButtonDynamic />
-                            <WalletDisconnectButtonDynamic />
-                            <IconButton aria-label="refresh" onClick={refreshAll}>
-                                <Refresh />
-                            </IconButton>
-                        </div>
+            <AppBar position="static">
+                <div className={styles.Header}>
+                    <div className={styles.globalStats}>
+                        <p>ELE/SOL: {_.round(eleSolPrice, 8)} SOL</p>
+                        <p>ELE/USDC: {_.round(eleUsdcPrice, 8)} USDC</p>
                     </div>
-                </AppBar>
+                    <div className={styles.walletButtons}>
+                        <WalletMultiButtonDynamic />
+                        <WalletDisconnectButtonDynamic />
+                        <IconButton aria-label="refresh" onClick={refreshAll}>
+                            <Refresh />
+                        </IconButton>
+                    </div>
+                </div>
+            </AppBar>
 
+            <main className={styles.main}>
                 {viewWalletInput()}
 
                 <Box
@@ -250,6 +271,7 @@ const Home: NextPage = () => {
                         borderRadius: 1,
                         p: 2,
                         width: '100%',
+                        maxWidth: '1080px',
                     }}
                 >
                     <FormControl fullWidth>
@@ -276,7 +298,7 @@ const Home: NextPage = () => {
                     <Table sx={{ minWidth: 600 }} aria-label="ELE production table">
                         <TableHead>
                             <TableRow>
-                                <TableCell></TableCell>
+                                <TableCell>Summary</TableCell>
                                 <TableCell>ELE/{timeframe}h</TableCell>
                                 <TableCell>SOL/{timeframe}h</TableCell>
                                 <TableCell>USDC/{timeframe}h</TableCell>
@@ -305,24 +327,27 @@ const Home: NextPage = () => {
                     </Table>
                 </TableContainer>
 
-                <div className={styles.grid}>
-                    {rabbits.map((stakable) => (
-                        <div key={stakable.nft.id} className={styles.card}>
-                            <Nft key={stakable.nft.id} stakable={stakable} />
-                        </div>
-                    ))}
-                </div>
+                <br />
 
-                <div className={styles.grid}>
-                    {crystals.map((stakable) => (
-                        <div key={stakable.nft.id} className={styles.card}>
-                            <Nft key={stakable.nft.id} stakable={stakable} />
-                        </div>
-                    ))}
-                </div>
+                <RabbitsTable rabbits={rabbits} eleSolPrice={eleSolPrice} />
+
+                <br />
+
+                <CrystalsTable crystals={crystals} eleSolPrice={eleSolPrice} />
+
+                <br />
             </main>
 
-            <footer className={styles.footer}></footer>
+            <AppBar position="static">
+                <div className={styles.footer}>
+                    <span>
+                        Made by{' '}
+                        <a href="https://github.com/nedrise27?tab=repositories" target="_blank" rel="noreferrer">
+                            nedrise
+                        </a>
+                    </span>
+                </div>
+            </AppBar>
         </div>
     );
 };

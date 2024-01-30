@@ -1,9 +1,0 @@
-.nftPreview {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-}
-
-.nftPreview img {
-    max-width: 200px;
-}
