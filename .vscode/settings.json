@@ -1,0 +1,8 @@
+{
+    "[typescript]": {
+        "editor.tabSize": 4
+    },
+    "[tsx]": {
+        "editor.tabSize": 4
+    }
+}
