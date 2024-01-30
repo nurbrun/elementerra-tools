@@ -39,7 +39,7 @@ export function CrystalsTable(props: Props) {
             <Table sx={{ minWidth: 600 }} aria-label="ELE production table">
                 <TableHead>
                     <TableRow>
-                        <TableCell>Crystal</TableCell>
+                        <TableCell>Crystal Level</TableCell>
                         <TableCell>Amount</TableCell>
                         <TableCell>ELE/h</TableCell>
                         <TableCell>SOL/h</TableCell>
