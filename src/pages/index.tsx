@@ -45,6 +45,8 @@ const connection = new Connection(process.env.NEXT_PUBLIC_SOLANA_RPC_ENDPOINT!);
 const metaplex = Metaplex.make(connection);
 const helius = new Helius(process.env.NEXT_PUBLIC_HELIUS_API_KEY!);
 
+type LoadinState = 'initial' | 'loading' | 'loaded';
+
 // const Home: NextPage = () => {
 export default function Home() {
     const wallet = useWallet();
@@ -63,7 +65,7 @@ export default function Home() {
     const [timeframe, setTimeframe] = useState<number>(1);
 
     const [pageErrors, setPageErrors] = useState<string>('');
-    const [pageLoading, setPageLoading] = useState(false);
+    const [loadingState, setLoadingState] = useState<LoadinState>('initial');
 
     const fetchEleSolPrice = async () => {
         const res = await fetch('https://price.jup.ag/v4/price?ids=ELE&vsToken=SOL');
@@ -96,7 +98,7 @@ export default function Home() {
 
     const fetchNft = useCallback(async () => {
         setPageErrors('');
-        setPageLoading(true);
+        setLoadingState('loading');
         if (walletAddress) {
             try {
                 const assets = await helius.rpc.getAssetsByOwner({
@@ -147,15 +149,13 @@ export default function Home() {
                 setRabbitsElePerHour(rabbitsElePerHour);
                 setCrystals(crystals);
                 setCrystalsElePerHour(crystalsElePerHour);
-                setPageLoading(false);
+                setLoadingState('loaded');
             } catch (err: any) {
                 setPageErrors(err.toString());
-                setRabbits([]);
-                setRabbitsElePerHour(0);
-                setCrystals([]);
-                setCrystalsElePerHour(0);
-                setPageLoading(false);
+                resetState();
             }
+        } else {
+            resetState();
         }
     }, [walletAddress]);
 
@@ -168,12 +168,22 @@ export default function Home() {
         if (wallet.connected) {
             setWalletAddress(wallet.publicKey?.toString());
             fetchNft();
+        } else {
+            resetState();
         }
-    }, [fetchNft, wallet.publicKey, wallet.connected]);
+    }, [fetchNft, wallet.publicKey, wallet.connected, wallet.disconnecting]);
 
     useEffect(() => {
         fetchNft();
     }, [fetchNft, walletAddress]);
+
+    function resetState() {
+        setRabbits([]);
+        setRabbitsElePerHour(0);
+        setCrystals([]);
+        setCrystalsElePerHour(0);
+        setLoadingState('loaded');
+    }
 
     async function refreshAll() {
         await fetchEleSolPrice();
@@ -182,7 +192,7 @@ export default function Home() {
     }
 
     function handleWalletInput(walletAddress: string) {
-        setWalletAddress(walletAddress);
+        +setWalletAddress(walletAddress);
     }
 
     function handleTimeframeChange(event: SelectChangeEvent<number>) {
@@ -245,11 +255,7 @@ export default function Home() {
                 <main className={styles.main}>
                     {viewWalletInput()}
 
-                    {pageLoading ? (
-                        <>
-                            <h3>Loading ...</h3>
-                        </>
-                    ) : (
+                    {loadingState === 'initial' || loadingState === 'loaded' ? (
                         <>
                             <Box
                                 sx={{
@@ -325,6 +331,10 @@ export default function Home() {
                             <br />
 
                             <CrystalsTable crystals={crystals} eleSolPrice={eleSolPrice} />
+                        </>
+                    ) : (
+                        <>
+                            <h3>Loading ...</h3>
                         </>
                     )}
                     <br />
