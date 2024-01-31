@@ -41,6 +41,9 @@ export function Header(props: Props) {
                     )}
 
                     <div className={styles.walletButtons}>
+                        <div className={styles.Warning}>
+                            <h3>Do NOT connect your Wallet if you do not know nedrise!</h3>
+                        </div>
                         <WalletMultiButtonDynamic />
                         <WalletDisconnectButtonDynamic />
                         {props.refresh ? (
