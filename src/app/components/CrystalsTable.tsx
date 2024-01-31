@@ -10,16 +10,19 @@ type Props = {
 
 function viewCrystalLevelRow(level: string, crystals: Stakable[], eleSolPrice: number) {
     const amount = crystals.length;
-    const eleProduction = (_.first(crystals)?.elePerHour || 0) * amount;
+    const firstCrystal = _.first(crystals);
+    if (firstCrystal) {
+        const eleProduction = (_.first(crystals)?.elePerHour || 0) * amount;
 
-    return (
-        <TableRow>
-            <TableCell>{level}</TableCell>
-            <TableCell>{amount}</TableCell>
-            <TableCell>{eleProduction}</TableCell>
-            <TableCell>{calculatePrice(eleProduction, eleSolPrice)}</TableCell>
-        </TableRow>
-    );
+        return (
+            <TableRow key={firstCrystal.nft.id}>
+                <TableCell>{level}</TableCell>
+                <TableCell>{amount}</TableCell>
+                <TableCell>{eleProduction}</TableCell>
+                <TableCell>{calculatePrice(eleProduction, eleSolPrice)}</TableCell>
+            </TableRow>
+        );
+    }
 }
 
 export function CrystalsTable(props: Props) {

@@ -2,11 +2,10 @@ import { ThemeProvider, createTheme } from '@mui/material';
 import { WalletAdapterNetwork } from '@solana/wallet-adapter-base';
 import { ConnectionProvider, WalletProvider } from '@solana/wallet-adapter-react';
 import { WalletModalProvider } from '@solana/wallet-adapter-react-ui';
-import { SolflareWalletAdapter, PhantomWalletAdapter } from '@solana/wallet-adapter-wallets';
+import { PhantomWalletAdapter, SolflareWalletAdapter } from '@solana/wallet-adapter-wallets';
 import { clusterApiUrl } from '@solana/web3.js';
 import type { AppProps } from 'next/app';
-import type { FC } from 'react';
-import React, { useMemo } from 'react';
+import { useMemo } from 'react';
 
 // Use require instead of import since order matters
 require('@solana/wallet-adapter-react-ui/styles.css');
@@ -22,7 +21,7 @@ export const ELEMENTERRA_RABBITS_COLLECTION = '4n4zLe1BcREy9XQyHwSMJJHR4YHn7AgP2
 export const ELEMENTERRA_CRYSTALS_COLLECTION = 'C2Frjbg6DosmE3GSbb8veTxGg8H7kS73FzduYh3b8er9';
 export const ELEMENTERRA_ELEMENTS_COLLECTION = 'CdES51P2ThUZsgAeqFG42k59QchQMWBR9hLLeUGeB2gL';
 
-const App: FC<AppProps> = ({ Component, pageProps }) => {
+export default function MyApp({ Component, pageProps }: AppProps) {
     // Can be set to 'devnet', 'testnet', or 'mainnet-beta'
     const network = WalletAdapterNetwork.Devnet;
 
@@ -52,6 +51,4 @@ const App: FC<AppProps> = ({ Component, pageProps }) => {
             </ConnectionProvider>
         </ThemeProvider>
     );
-};
-
-export default App;
+}

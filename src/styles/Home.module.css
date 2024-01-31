@@ -43,19 +43,6 @@
     text-align: center;
 }
 
-.Header {
-    width: 100%;
-    padding: 0 2rem;
-    display: flex;
-    justify-content: space-between;
-}
-
-.walletButtons {
-    margin: 1.5rem 0;
-    display: flex;
-    gap: 2rem;
-}
-
 .description {
     margin: 4rem 0;
     line-height: 1.5;

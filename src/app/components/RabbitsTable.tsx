@@ -9,7 +9,7 @@ type Props = {
 
 function viewRabbitRow(stakable: Stakable, eleSolPrice: number) {
     return (
-        <TableRow>
+        <TableRow key={stakable.nft.id}>
             <TableCell>{stakable.nft.content?.metadata?.name}</TableCell>
             <TableCell>{stakable.level}</TableCell>
             <TableCell>{stakable.elePerHour} ELE/h</TableCell>
