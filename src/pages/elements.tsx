@@ -36,6 +36,8 @@ type Element = {
 
 type Ordering = 'tier:asc' | 'tier:desc' | 'price:asc' | 'price:desc' | 'name:asc' | 'name:desc';
 
+type Filter = 'all' | 'invented' | 'not invented';
+
 type Props = {};
 
 export default function Elments() {
@@ -45,6 +47,8 @@ export default function Elments() {
     const [ordering, setOrdering] = useState<Ordering>('tier:asc');
 
     const [search, setSearch] = useState<string>('');
+
+    const [filter, setFilter] = useState<Filter>('all');
 
     const fetchElements = useCallback(async () => {
         const assets = await connection.getProgramAccounts(new PublicKey(ELEMENTERRA_PROGRAM_ID), {
@@ -137,23 +141,41 @@ export default function Elments() {
         }
 
         setElementsDisplay(sorted);
-    }, [ordering]);
+    }, [ordering, elements]);
+
+    useEffect(() => {
+        let filtered;
+        if (filter === 'invented') {
+            filtered = _.filter(elements, { invented: true });
+        } else if (filter === 'not invented') {
+            filtered = _.filter(elements, { invented: false });
+        } else {
+            filtered = _.clone(elements);
+        }
+        setElementsDisplay(filtered);
+    }, [filter, elements]);
 
     useEffect(() => {
         const sorted = _.sortBy(elements, (a: Element) => {
             return stringSimilarity(a.name.toLowerCase(), search.toLowerCase()) * -1;
         });
         setElementsDisplay(sorted);
-    }, [search]);
+    }, [search, elements]);
 
     useEffect(() => {
         fetchElements();
-    }, []);
+    }, [fetchElements]);
 
     function handleOrderingChange(event: SelectChangeEvent<Ordering>) {
         event.preventDefault();
         const ordering = event.target.value;
         setOrdering(ordering as Ordering);
+    }
+
+    function handleFilterChange(event: SelectChangeEvent<Filter>) {
+        event.preventDefault();
+        const filter = event.target.value;
+        setFilter(filter as Filter);
     }
 
     function handleSearchInput(event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement> | undefined) {
@@ -170,11 +192,11 @@ export default function Elments() {
 
             <Box sx={{ padding: '1rem 4rem' }}>
                 <FormControl fullWidth>
-                    <InputLabel id="eleProductionTimeframeLabel">Ordering</InputLabel>
+                    <InputLabel id="orderByLabel">Ordering</InputLabel>
                     <Select
-                        labelId="eleProductionTimeframeLabel"
+                        labelId="orderByLabel"
                         aria-label="Ordering"
-                        id="eleProductionTimeframe"
+                        id="orderBy"
                         value={ordering}
                         label="Ordering"
                         onChange={handleOrderingChange}
@@ -185,6 +207,24 @@ export default function Elments() {
                         <MenuItem value={'price:desc'}>Price descending</MenuItem>
                         <MenuItem value={'name:asc'}>Name ascending</MenuItem>
                         <MenuItem value={'name:desc'}>Name descending</MenuItem>
+                    </Select>
+                </FormControl>
+            </Box>
+
+            <Box sx={{ padding: '0 4rem 1rem 4rem' }}>
+                <FormControl fullWidth>
+                    <InputLabel id="inventedFilterLabel">Filter</InputLabel>
+                    <Select
+                        labelId="inventedFilterLabel"
+                        aria-label="Filter"
+                        id="inventedFilter"
+                        value={filter}
+                        label="Filter"
+                        onChange={handleFilterChange}
+                    >
+                        <MenuItem value={'all'}>All</MenuItem>
+                        <MenuItem value={'invented'}>Invented</MenuItem>
+                        <MenuItem value={'not invented'}>Not Invented</MenuItem>
                     </Select>
                 </FormControl>
             </Box>
