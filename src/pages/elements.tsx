@@ -1,20 +1,18 @@
-import { Helius } from 'helius-sdk';
-import { Header } from '../app/components/Header';
-import { ChangeEvent, useCallback, useEffect, useState } from 'react';
-import { ELEMENTERRA_ELEMENTS_COLLECTION, ELEMENTERRA_PROGRAM_ID } from './_app';
-import { Connection } from '@solana/web3.js';
 import { Metaplex, PublicKey } from '@metaplex-foundation/js';
-import { encode as encodeb58 } from 'bs58';
-import { BASE_ELEMENTS_PRICES, BASE_ELEMENT_PRICE } from '../lib/constants/elements';
-import _ from 'lodash';
-import Grid from '@mui/material/Unstable_Grid2';
-import Image from 'next/image';
 import { Box, FormControl, InputLabel, MenuItem, Paper, Select, SelectChangeEvent, TextField } from '@mui/material';
-import styled from '@emotion/styled';
+import Grid from '@mui/material/Unstable_Grid2';
+import { Connection } from '@solana/web3.js';
+import { encode as encodeb58 } from 'bs58';
+import { Helius } from 'helius-sdk';
+import _ from 'lodash';
+import Image from 'next/image';
+import { ChangeEvent, useCallback, useEffect, useState } from 'react';
 import { stringSimilarity } from 'string-similarity-js';
 
+import { Header } from '../app/components/Header';
+import { BASE_ELEMENTS_PRICES } from '../lib/constants/elements';
+import { ELEMENTERRA_PROGRAM_ID } from './_app';
 import styles from '../styles/Elements.module.css';
-import { levenshtein } from '../lib/utils';
 
 const connection = new Connection(process.env.NEXT_PUBLIC_SOLANA_RPC_ENDPOINT!);
 const metaplex = Metaplex.make(connection);
@@ -156,6 +154,10 @@ export default function Elments() {
     }, [filter, elements]);
 
     useEffect(() => {
+        if (_.isNil(search) || _.isEmpty(search)) {
+            setElementsDisplay(_.clone(elements));
+            return;
+        }
         const sorted = _.sortBy(elements, (a: Element) => {
             return stringSimilarity(a.name.toLowerCase(), search.toLowerCase()) * -1;
         });
@@ -178,12 +180,10 @@ export default function Elments() {
         setFilter(filter as Filter);
     }
 
-    function handleSearchInput(event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement> | undefined) {
-        event?.preventDefault();
-        const query = event?.target?.value;
-        if (query) {
-            setSearch(query);
-        }
+    function handleSearchInput(event: ChangeEvent<HTMLInputElement>) {
+        event.preventDefault();
+        const query = event.target.value;
+        setSearch(query);
     }
 
     return (
