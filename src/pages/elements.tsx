@@ -1,5 +1,20 @@
 import { Metaplex, PublicKey } from '@metaplex-foundation/js';
-import { Box, FormControl, InputLabel, MenuItem, Paper, Select, SelectChangeEvent, TextField } from '@mui/material';
+import {
+    Box,
+    Checkbox,
+    FormControl,
+    FormControlLabel,
+    FormGroup,
+    FormLabel,
+    InputLabel,
+    MenuItem,
+    Paper,
+    Radio,
+    RadioGroup,
+    Select,
+    SelectChangeEvent,
+    TextField,
+} from '@mui/material';
 import Grid from '@mui/material/Unstable_Grid2';
 import { Connection } from '@solana/web3.js';
 import { encode as encodeb58 } from 'bs58';
@@ -46,7 +61,9 @@ export default function Elments() {
 
     const [search, setSearch] = useState<string>('');
 
-    const [filter, setFilter] = useState<Filter>('all');
+    const [inventedFilter, setInventedFilter] = useState<Filter>('all');
+
+    const [tierFilters, setTierFilters] = useState<Set<number>>(new Set());
 
     const fetchElements = useCallback(async () => {
         const assets = await connection.getProgramAccounts(new PublicKey(ELEMENTERRA_PROGRAM_ID), {
@@ -124,6 +141,29 @@ export default function Elments() {
     }, []);
 
     useEffect(() => {
+        // inventedFilter
+        let filtered;
+        if (inventedFilter === 'invented') {
+            filtered = _.filter(elements, { invented: true });
+        } else if (inventedFilter === 'not invented') {
+            filtered = _.filter(elements, { invented: false });
+        } else {
+            filtered = _.clone(elements);
+        }
+
+        // tierFilters
+        if (!_.isEmpty(tierFilters)) {
+            filtered = filtered.filter((e) => Array.from(tierFilters).includes(e.tier));
+        }
+
+        // search
+        if (!_.isNil(search) || !_.isEmpty(search)) {
+            filtered = _.sortBy(filtered, (a: Element) => {
+                return stringSimilarity(a.name.toLowerCase(), search.toLowerCase()) * -1;
+            });
+        }
+
+        // ordering
         const field = ordering.split(':')[0];
         const order = ordering.split(':')[1];
 
@@ -131,38 +171,15 @@ export default function Elments() {
             throw new Error(`Unkown order: "${order}"`);
         }
 
-        let sorted = _.orderBy(elements, [field, 'name'], [order, 'asc']);
+        filtered = _.orderBy(filtered, [field, 'name'], [order, 'asc']);
 
         if (field === 'price') {
-            const parts = _.partition(sorted, field);
-            sorted = [...parts[0], ...parts[1]];
+            const parts = _.partition(filtered, field);
+            filtered = [...parts[0], ...parts[1]];
         }
 
-        setElementsDisplay(sorted);
-    }, [ordering, elements]);
-
-    useEffect(() => {
-        let filtered;
-        if (filter === 'invented') {
-            filtered = _.filter(elements, { invented: true });
-        } else if (filter === 'not invented') {
-            filtered = _.filter(elements, { invented: false });
-        } else {
-            filtered = _.clone(elements);
-        }
         setElementsDisplay(filtered);
-    }, [filter, elements]);
-
-    useEffect(() => {
-        if (_.isNil(search) || _.isEmpty(search)) {
-            setElementsDisplay(_.clone(elements));
-            return;
-        }
-        const sorted = _.sortBy(elements, (a: Element) => {
-            return stringSimilarity(a.name.toLowerCase(), search.toLowerCase()) * -1;
-        });
-        setElementsDisplay(sorted);
-    }, [search, elements]);
+    }, [inventedFilter, tierFilters, search, ordering, elements]);
 
     useEffect(() => {
         fetchElements();
@@ -177,7 +194,19 @@ export default function Elments() {
     function handleFilterChange(event: SelectChangeEvent<Filter>) {
         event.preventDefault();
         const filter = event.target.value;
-        setFilter(filter as Filter);
+        setInventedFilter(filter as Filter);
+    }
+
+    function handleTierFilterSelect(event: any) {
+        const checked = event.target.checked;
+        const tier = parseInt(event.target.value, 10);
+        let tiersToFilter = _.clone(tierFilters);
+        if (checked) {
+            tiersToFilter.add(tier);
+        } else {
+            tiersToFilter.delete(tier);
+        }
+        setTierFilters(tiersToFilter);
     }
 
     function handleSearchInput(event: ChangeEvent<HTMLInputElement>) {
@@ -191,7 +220,18 @@ export default function Elments() {
             <Header />
 
             <Box sx={{ padding: '1rem 4rem' }}>
-                <FormControl fullWidth>
+                <TextField
+                    type="search"
+                    fullWidth
+                    label="Search"
+                    id="searchField"
+                    variant="outlined"
+                    onChange={handleSearchInput}
+                />
+            </Box>
+
+            <Box sx={{ padding: '1rem 4rem', gap: '1rem', display: 'flex' }}>
+                <FormControl sx={{ minWidth: '150px' }}>
                     <InputLabel id="orderByLabel">Ordering</InputLabel>
                     <Select
                         labelId="orderByLabel"
@@ -209,17 +249,14 @@ export default function Elments() {
                         <MenuItem value={'name:desc'}>Name descending</MenuItem>
                     </Select>
                 </FormControl>
-            </Box>
-
-            <Box sx={{ padding: '0 4rem 1rem 4rem' }}>
-                <FormControl fullWidth>
-                    <InputLabel id="inventedFilterLabel">Filter</InputLabel>
+                <FormControl sx={{ minWidth: '150px' }}>
+                    <InputLabel id="inventedFilterLabel">Invented</InputLabel>
                     <Select
                         labelId="inventedFilterLabel"
-                        aria-label="Filter"
+                        aria-label="Invented"
                         id="inventedFilter"
-                        value={filter}
-                        label="Filter"
+                        value={inventedFilter}
+                        label="Invented"
                         onChange={handleFilterChange}
                     >
                         <MenuItem value={'all'}>All</MenuItem>
@@ -227,17 +264,18 @@ export default function Elments() {
                         <MenuItem value={'not invented'}>Not Invented</MenuItem>
                     </Select>
                 </FormControl>
-            </Box>
-
-            <Box sx={{ padding: '0 4rem' }}>
-                <TextField
-                    type="search"
-                    fullWidth
-                    label="Search"
-                    id="searchField"
-                    variant="outlined"
-                    onChange={handleSearchInput}
-                />
+                <FormControl sx={{ minWidth: '150px' }}>
+                    <FormGroup aria-label="position" row onChange={handleTierFilterSelect}>
+                        <FormControlLabel value="0" control={<Checkbox />} label="Tier 0" labelPlacement="start" />
+                        <FormControlLabel value="1" control={<Checkbox />} label="Tier 1" labelPlacement="start" />
+                        <FormControlLabel value="2" control={<Checkbox />} label="Tier 2" labelPlacement="start" />
+                        <FormControlLabel value="3" control={<Checkbox />} label="Tier 3" labelPlacement="start" />
+                        <FormControlLabel value="4" control={<Checkbox />} label="Tier 4" labelPlacement="start" />
+                        <FormControlLabel value="5" control={<Checkbox />} label="Tier 5" labelPlacement="start" />
+                        <FormControlLabel value="6" control={<Checkbox />} label="Tier 6" labelPlacement="start" />
+                        <FormControlLabel value="7" control={<Checkbox />} label="Tier 7" labelPlacement="start" />
+                    </FormGroup>
+                </FormControl>
             </Box>
 
             <br />

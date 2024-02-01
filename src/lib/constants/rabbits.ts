@@ -28,7 +28,7 @@ export const RABBITS_ELE_PER_HOUR: Record<string, number> = {
     '26': 3540,
     '27': 3740,
     '28': 3940,
-    '29': 0,
+    '29': 4140,
     '30': 0,
     '31': 0,
     '32': 0,
