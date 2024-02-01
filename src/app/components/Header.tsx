@@ -29,6 +29,7 @@ export function Header(props: Props) {
                 <nav className={styles.Navigation}>
                     <Link href={'/'}>Home</Link>
                     <Link href={'/roi'}>Roi Tables</Link>
+                    <Link href={'/elements'}>Elements</Link>
                 </nav>
                 <div className={styles.Header}>
                     {props.eleSolPrice && props.eleUsdcPrice ? (
