@@ -1,6 +1,6 @@
 import { Helius } from 'helius-sdk';
 import { Header } from '../app/components/Header';
-import { useCallback, useEffect, useState } from 'react';
+import { ChangeEvent, useCallback, useEffect, useState } from 'react';
 import { ELEMENTERRA_ELEMENTS_COLLECTION, ELEMENTERRA_PROGRAM_ID } from './_app';
 import { Connection } from '@solana/web3.js';
 import { Metaplex, PublicKey } from '@metaplex-foundation/js';
@@ -9,10 +9,12 @@ import { BASE_ELEMENTS_PRICES, BASE_ELEMENT_PRICE } from '../lib/constants/eleme
 import _ from 'lodash';
 import Grid from '@mui/material/Unstable_Grid2';
 import Image from 'next/image';
-import { Box, FormControl, InputLabel, MenuItem, Paper, Select, SelectChangeEvent } from '@mui/material';
+import { Box, FormControl, InputLabel, MenuItem, Paper, Select, SelectChangeEvent, TextField } from '@mui/material';
 import styled from '@emotion/styled';
+import { stringSimilarity } from 'string-similarity-js';
 
 import styles from '../styles/Elements.module.css';
+import { levenshtein } from '../lib/utils';
 
 const connection = new Connection(process.env.NEXT_PUBLIC_SOLANA_RPC_ENDPOINT!);
 const metaplex = Metaplex.make(connection);
@@ -38,8 +40,11 @@ type Props = {};
 
 export default function Elments() {
     const [elements, setElements] = useState<Element[]>([]);
+    const [elementsDisplay, setElementsDisplay] = useState<Element[]>([]);
 
     const [ordering, setOrdering] = useState<Ordering>('tier:asc');
+
+    const [search, setSearch] = useState<string>('');
 
     const fetchElements = useCallback(async () => {
         const assets = await connection.getProgramAccounts(new PublicKey(ELEMENTERRA_PROGRAM_ID), {
@@ -75,14 +80,14 @@ export default function Elments() {
                 const recipe: RecipeTuple = [ingredient1, ingredient2, ingredient3, ingredient4];
 
                 // const unkonwn3Hex = buf.subarray(222, 226).toString('hex'); // 222 - 225
-                const name = buf
+                const nameRaw = buf
                     .subarray(226, 226 + 16)
                     .filter((n) => n > 31 && n != 33) // not ASCII control character and not "!" character
                     .toString()
                     .trimEnd(); // 226 - ?
 
-                const nameKebab =
-                    name === 'TShirt' ? 't-shirt' : name.replace(/([a-z0-9])([A-Z])/g, '$1-$2').toLowerCase();
+                const name = nameRaw.replaceAll(/([a-zA-Z])([A-Z])/g, '$1 $2');
+                const nameKebab = nameRaw.replaceAll(/([a-zA-Z0-9])([A-Z])/g, '$1-$2').toLowerCase();
                 const url = `https://elementerra-mainnet.s3.us-east-1.amazonaws.com/transparent/${nameKebab}.png`;
 
                 return {
@@ -113,17 +118,10 @@ export default function Elments() {
             });
 
         setElements(elements);
+        setElementsDisplay(elements);
     }, []);
 
     useEffect(() => {
-        fetchElements();
-    }, []);
-
-    function handleOrderingChange(event: SelectChangeEvent<Ordering>) {
-        event.preventDefault();
-        const ordering = event.target.value;
-        setOrdering(ordering as Ordering);
-
         const field = ordering.split(':')[0];
         const order = ordering.split(':')[1];
 
@@ -138,14 +136,39 @@ export default function Elments() {
             sorted = [...parts[0], ...parts[1]];
         }
 
-        setElements(sorted);
+        setElementsDisplay(sorted);
+    }, [ordering]);
+
+    useEffect(() => {
+        const sorted = _.sortBy(elements, (a: Element) => {
+            return stringSimilarity(a.name.toLowerCase(), search.toLowerCase()) * -1;
+        });
+        setElementsDisplay(sorted);
+    }, [search]);
+
+    useEffect(() => {
+        fetchElements();
+    }, []);
+
+    function handleOrderingChange(event: SelectChangeEvent<Ordering>) {
+        event.preventDefault();
+        const ordering = event.target.value;
+        setOrdering(ordering as Ordering);
+    }
+
+    function handleSearchInput(event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement> | undefined) {
+        event?.preventDefault();
+        const query = event?.target?.value;
+        if (query) {
+            setSearch(query);
+        }
     }
 
     return (
         <>
             <Header />
 
-            <Box sx={{ flexGrow: 1, padding: '1rem 4rem' }}>
+            <Box sx={{ padding: '1rem 4rem' }}>
                 <FormControl fullWidth>
                     <InputLabel id="eleProductionTimeframeLabel">Ordering</InputLabel>
                     <Select
@@ -166,10 +189,21 @@ export default function Elments() {
                 </FormControl>
             </Box>
 
+            <Box sx={{ padding: '0 4rem' }}>
+                <TextField
+                    type="search"
+                    fullWidth
+                    label="Search"
+                    id="searchField"
+                    variant="outlined"
+                    onChange={handleSearchInput}
+                />
+            </Box>
+
             <br />
             <Box sx={{ flexGrow: 1 }}>
                 <Grid container spacing={2} justifyContent={'center'}>
-                    {elements.map(viewElementsCard)}
+                    {elementsDisplay.map(viewElementsCard)}
                 </Grid>
             </Box>
         </>
@@ -191,7 +225,7 @@ function viewElementsCard(element: Element) {
                 >
                     <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                         <div>
-                            <strong>{element.name}</strong>
+                            <strong style={{ whiteSpace: 'nowrap' }}>{element.name}</strong>
                             <p>{element.invented ? 'invented' : 'not invented'}</p>
                         </div>
                         <Image
