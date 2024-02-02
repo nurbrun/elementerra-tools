@@ -2,6 +2,7 @@ import { Metaplex, PublicKey } from '@metaplex-foundation/js';
 import {
     AppBar,
     Box,
+    Button,
     FormControl,
     InputLabel,
     MenuItem,
@@ -34,6 +35,8 @@ import {
 import styles from '../styles/Home.module.css';
 import Head from 'next/head';
 import { NextPage } from 'next';
+import { OTHER_STAKABLE_NFT_COLLECTIONS } from '../lib/constants/otherNfts';
+import { OtherNftsTable } from '../app/components/OtherNftsTable';
 
 export type Stakable = {
     nft: DAS.GetAssetResponse;
@@ -51,13 +54,16 @@ type LoadinState = 'initial' | 'loading' | 'loaded';
 export default function Home() {
     const wallet = useWallet();
 
-    const [walletAddress, setWalletAddress] = useState<string>();
+    const [walletAddresses, setWalletAddresses] = useState<string[]>([]);
+    // const [walletAddress, setWalletAddress] = useState<string>();
 
     const [rabbits, setRabbits] = useState<Stakable[]>([]);
     const [crystals, setCrystals] = useState<Stakable[]>([]);
+    const [otherNFTs, setOtherNFTs] = useState<Stakable[]>([]);
 
     const [rabbitsElePerHour, setRabbitsElePerHour] = useState<number>(0);
     const [crystalsElePerHour, setCrystalsElePerHour] = useState<number>(0);
+    const [otherNFTsElePerHour, setOtherNFTsElePerHour] = useState<number>(0);
 
     const [eleSolPrice, setEleSolPrice] = useState<number>(0);
     const [eleUsdcPrice, setEleUsdcPrice] = useState<number>(0);
@@ -97,17 +103,24 @@ export default function Home() {
     }
 
     const fetchNft = useCallback(async () => {
+        console.log('fetchNfts');
         setPageErrors('');
         setLoadingState('loading');
-        if (walletAddress) {
+        if (!_.isEmpty(walletAddresses)) {
             try {
-                const assets = await helius.rpc.getAssetsByOwner({
-                    ownerAddress: walletAddress,
-                    page: 1,
-                    // limit: 100,
-                });
+                const assetResponses = await Promise.all(
+                    walletAddresses.map((ownerAddress) =>
+                        helius.rpc.getAssetsByOwner({
+                            ownerAddress,
+                            page: 1,
+                            limit: 1000,
+                        })
+                    )
+                );
 
-                const unburnt = assets.items.filter((item) => !item.burnt);
+                const assets = assetResponses.flatMap((res) => res.items);
+
+                const unburnt = assets.filter((item) => !item.burnt);
 
                 const rabbitsRes = unburnt.filter(
                     (item) => _.first(item.grouping)?.group_value == ELEMENTERRA_RABBITS_COLLECTION
@@ -141,14 +154,29 @@ export default function Home() {
                     };
                 });
 
-                const elements = unburnt.filter(
-                    (item) => _.first(item.grouping)?.group_value == ELEMENTERRA_ELEMENTS_COLLECTION
-                );
+                const otherNFTs = [];
+                let otherNFTsElePerHour = 0;
+                for (const nft of unburnt) {
+                    const collectionGroup = nft.grouping?.find((g) => g.group_key === 'collection');
+                    if (!_.isNil(collectionGroup)) {
+                        const collection = OTHER_STAKABLE_NFT_COLLECTIONS[collectionGroup.group_value];
+                        if (!_.isNil(collection)) {
+                            otherNFTsElePerHour += collection.elePerHour;
+                            otherNFTs.push({
+                                nft,
+                                level: '',
+                                elePerHour: collection.elePerHour,
+                            });
+                        }
+                    }
+                }
 
                 setRabbits(rabbits);
                 setRabbitsElePerHour(rabbitsElePerHour);
                 setCrystals(crystals);
                 setCrystalsElePerHour(crystalsElePerHour);
+                setOtherNFTs(otherNFTs);
+                setOtherNFTsElePerHour(otherNFTsElePerHour);
                 setLoadingState('loaded');
             } catch (err: any) {
                 setPageErrors(err.toString());
@@ -157,7 +185,7 @@ export default function Home() {
         } else {
             resetState();
         }
-    }, [walletAddress]);
+    }, [walletAddresses]);
 
     useEffect(() => {
         fetchEleSolPrice();
@@ -166,8 +194,12 @@ export default function Home() {
 
     useEffect(() => {
         if (wallet.connected) {
-            setWalletAddress(wallet.publicKey?.toString());
-            fetchNft();
+            const walletAddress = wallet.publicKey?.toString();
+            if (walletAddress) {
+                setWalletAddresses([walletAddress]);
+                fetchNft();
+                return;
+            }
         } else {
             resetState();
         }
@@ -175,13 +207,9 @@ export default function Home() {
 
     useEffect(() => {
         fetchNft();
-    }, [fetchNft, walletAddress]);
+    }, [fetchNft]);
 
     function resetState() {
-        setRabbits([]);
-        setRabbitsElePerHour(0);
-        setCrystals([]);
-        setCrystalsElePerHour(0);
         setLoadingState('loaded');
     }
 
@@ -191,8 +219,20 @@ export default function Home() {
         await fetchNft();
     }
 
-    function handleWalletInput(walletAddress: string) {
-        +setWalletAddress(walletAddress);
+    function addWalletAddress(index: number, walletAddress: string) {
+        let newAddresses = _.clone(walletAddresses);
+
+        if (_.isEmpty(walletAddress)) {
+            newAddresses.splice(index, 1);
+        } else if (!walletAddresses.includes(walletAddress)) {
+            if (walletAddresses.length <= index) {
+                newAddresses.push(walletAddress);
+            } else {
+                newAddresses[index] = walletAddress;
+            }
+        }
+
+        setWalletAddresses(newAddresses);
     }
 
     function handleTimeframeChange(event: SelectChangeEvent<number>) {
@@ -201,7 +241,7 @@ export default function Home() {
     }
 
     function totalElePerHour() {
-        return rabbitsElePerHour + crystalsElePerHour;
+        return rabbitsElePerHour + crystalsElePerHour + otherNFTsElePerHour;
     }
 
     function perTimeFrame(perHour: number) {
@@ -216,29 +256,18 @@ export default function Home() {
         return ele * eleUsdcPrice;
     }
 
-    function viewWalletInput() {
-        if (!wallet?.connected) {
-            return (
-                <Box
-                    sx={{
-                        bgcolor: 'background.paper',
-                        boxShadow: 1,
-                        borderRadius: 1,
-                        p: 2,
-                        width: '100%',
-                    }}
-                >
-                    <TextField
-                        fullWidth
-                        label="Wallet Address"
-                        id="walletAddress"
-                        variant="outlined"
-                        error={!_.isEmpty(pageErrors)}
-                        onChange={(event) => handleWalletInput(event.target.value)}
-                    />
-                </Box>
-            );
-        }
+    function viewWalletInputs(index: number) {
+        return (
+            <TextField
+                key={index}
+                fullWidth
+                label="Wallet Address"
+                id="walletAddress"
+                variant="outlined"
+                error={!_.isEmpty(pageErrors)}
+                onChange={(event) => addWalletAddress(index, event.target.value)}
+            />
+        );
     }
 
     return (
@@ -253,7 +282,20 @@ export default function Home() {
                 <Header eleSolPrice={eleSolPrice} eleUsdcPrice={eleUsdcPrice} refresh={refreshAll} />
 
                 <main className={styles.main}>
-                    {viewWalletInput()}
+                    <Box
+                        sx={{
+                            bgcolor: 'background.paper',
+                            boxShadow: 1,
+                            borderRadius: 1,
+                            p: 2,
+                            width: '100%',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'end',
+                        }}
+                    >
+                        {_.range(0, walletAddresses.length + 1).map(viewWalletInputs)}
+                    </Box>
 
                     {loadingState === 'initial' || loadingState === 'loaded' ? (
                         <>
@@ -311,6 +353,12 @@ export default function Home() {
                                             <TableCell>{perTimeFrame(eleInUsdc(crystalsElePerHour))} USDC</TableCell>
                                         </TableRow>
                                         <TableRow>
+                                            <TableCell>Other NFTs</TableCell>
+                                            <TableCell>{perTimeFrame(otherNFTsElePerHour)} ELE</TableCell>
+                                            <TableCell>{perTimeFrame(eleInSol(otherNFTsElePerHour))} SOL</TableCell>
+                                            <TableCell>{perTimeFrame(eleInUsdc(otherNFTsElePerHour))} USDC</TableCell>
+                                        </TableRow>
+                                        <TableRow>
                                             <TableCell variant="head">All</TableCell>
                                             <TableCell variant="head">{perTimeFrame(totalElePerHour())} ELE</TableCell>
                                             <TableCell variant="head">
@@ -331,6 +379,10 @@ export default function Home() {
                             <br />
 
                             <CrystalsTable crystals={crystals} eleSolPrice={eleSolPrice} />
+
+                            <br />
+
+                            <OtherNftsTable otherNfts={otherNFTs} eleSolPrice={eleSolPrice} />
                         </>
                     ) : (
                         <>

@@ -1,6 +1,7 @@
 import { Metaplex, PublicKey } from '@metaplex-foundation/js';
 import {
     Box,
+    Button,
     Checkbox,
     FormControl,
     FormControlLabel,
@@ -8,35 +9,39 @@ import {
     FormLabel,
     InputLabel,
     MenuItem,
+    Modal,
     Paper,
     Radio,
     RadioGroup,
     Select,
     SelectChangeEvent,
     TextField,
+    Typography,
 } from '@mui/material';
 import Grid from '@mui/material/Unstable_Grid2';
 import { Connection } from '@solana/web3.js';
 import { encode as encodeb58 } from 'bs58';
 import { Helius } from 'helius-sdk';
-import _ from 'lodash';
+import _, { add } from 'lodash';
 import Image from 'next/image';
 import { ChangeEvent, useCallback, useEffect, useState } from 'react';
 import { stringSimilarity } from 'string-similarity-js';
 
 import { Header } from '../app/components/Header';
-import { BASE_ELEMENTS_PRICES } from '../lib/constants/elements';
+import { BASE_ELEMENTS, BASE_ELEMENTS_PRICES } from '../lib/constants/elements';
 import { ELEMENTERRA_PROGRAM_ID } from './_app';
 import styles from '../styles/Elements.module.css';
+import style from 'styled-jsx/style';
+import { ElementCard, ElementModalCard } from '../app/components/ElementCard';
 
 const connection = new Connection(process.env.NEXT_PUBLIC_SOLANA_RPC_ENDPOINT!);
 const metaplex = Metaplex.make(connection);
 const helius = new Helius(process.env.NEXT_PUBLIC_HELIUS_API_KEY!);
-const PADDING_ADDRESS = '11111111111111111111111111111111';
+export const PADDING_ADDRESS = '11111111111111111111111111111111';
 
-type RecipeTuple = [string, string, string, string];
+export type RecipeTuple = [string, string, string, string];
 
-type Element = {
+export type Element = {
     address: string;
     name: string;
     inventorAddress: string;
@@ -47,6 +52,8 @@ type Element = {
     price?: number;
 };
 
+export type ExtendedRecipe = Record<string, { element: Element; amount: number }>;
+
 type Ordering = 'tier:asc' | 'tier:desc' | 'price:asc' | 'price:desc' | 'name:asc' | 'name:desc';
 
 type Filter = 'all' | 'invented' | 'not invented';
@@ -54,7 +61,7 @@ type Filter = 'all' | 'invented' | 'not invented';
 type Props = {};
 
 export default function Elments() {
-    const [elements, setElements] = useState<Element[]>([]);
+    const [elementsRecord, setElementsRecord] = useState<Record<string, Element>>({});
     const [elementsDisplay, setElementsDisplay] = useState<Element[]>([]);
 
     const [ordering, setOrdering] = useState<Ordering>('tier:asc');
@@ -64,6 +71,10 @@ export default function Elments() {
     const [inventedFilter, setInventedFilter] = useState<Filter>('all');
 
     const [tierFilters, setTierFilters] = useState<Set<number>>(new Set());
+
+    const [openedElement, setOpenedElement] = useState<Element | undefined>();
+    const [openedElementAddress, setOpenedElementAddress] = useState<string | null>(null);
+    const [openedElementRecipe, setOpenedElementRecipe] = useState<ExtendedRecipe[]>([]);
 
     const fetchElements = useCallback(async () => {
         const assets = await connection.getProgramAccounts(new PublicKey(ELEMENTERRA_PROGRAM_ID), {
@@ -79,7 +90,7 @@ export default function Elments() {
             }
         }
 
-        let elements: Element[] = assets
+        const elements: Element[] = assets
             .map((e) => {
                 const buf = e.account.data;
 
@@ -136,11 +147,13 @@ export default function Elments() {
                 };
             });
 
-        setElements(elements);
+        setElementsRecord(Object.fromEntries(elements.map((e) => [e.address, e])));
         setElementsDisplay(elements);
     }, []);
 
     useEffect(() => {
+        const elements = Object.values(elementsRecord);
+
         // inventedFilter
         let filtered;
         if (inventedFilter === 'invented') {
@@ -179,7 +192,59 @@ export default function Elments() {
         }
 
         setElementsDisplay(filtered);
-    }, [inventedFilter, tierFilters, search, ordering, elements]);
+    }, [inventedFilter, tierFilters, search, ordering, elementsRecord]);
+
+    useEffect(() => {
+        if (_.isNil(openedElementAddress) || _.isEmpty(openedElementAddress)) {
+            setOpenedElement(undefined);
+            return;
+        }
+
+        const element = elementsRecord[openedElementAddress];
+        const receipes: string[][] = [element.recipe];
+        const extendedRecipes: ExtendedRecipe[] = [];
+
+        let sanityCheck = 0;
+
+        while (true) {
+            const lastRecipe = _.last(receipes)!;
+            let nextLevel: string[] = [];
+            const extendedNextLevel: ExtendedRecipe = {};
+
+            for (const item of lastRecipe) {
+                const extendedItem = elementsRecord[item];
+                if (!_.isNil(extendedItem)) {
+                    const elementName = extendedItem.name;
+                    if (!_.has(extendedNextLevel, elementName)) {
+                        extendedNextLevel[elementName] = {
+                            element: extendedItem,
+                            amount: 1,
+                        };
+                    } else {
+                        extendedNextLevel[elementName].amount += 1;
+                    }
+
+                    nextLevel = [...nextLevel, ...extendedItem.recipe.filter((e) => e !== PADDING_ADDRESS)];
+                }
+            }
+
+            extendedRecipes.push(extendedNextLevel);
+
+            if (_.isEmpty(nextLevel)) {
+                break;
+            }
+
+            receipes.push(nextLevel);
+
+            sanityCheck++;
+            if (sanityCheck > 20) {
+                break;
+            }
+        }
+
+        setOpenedElementRecipe(extendedRecipes);
+        setOpenedElement(elementsRecord[openedElementAddress]);
+    }, [openedElementAddress, elementsRecord]);
 
     useEffect(() => {
         fetchElements();
@@ -213,6 +278,14 @@ export default function Elments() {
         event.preventDefault();
         const query = event.target.value;
         setSearch(query);
+    }
+
+    function handleOpenElement(elementId: string) {
+        setOpenedElementAddress(elementId);
+    }
+
+    function handleCloseElement() {
+        setOpenedElementAddress(null);
     }
 
     return (
@@ -279,47 +352,20 @@ export default function Elments() {
             </Box>
 
             <br />
+
             <Box sx={{ flexGrow: 1 }}>
-                <Grid container spacing={2} justifyContent={'center'}>
-                    {elementsDisplay.map(viewElementsCard)}
+                <Grid container spacing={2} gap={2} justifyContent={'center'}>
+                    {elementsDisplay.map((e) => (
+                        <ElementCard key={e.address} element={e} onOpen={handleOpenElement} />
+                    ))}
                 </Grid>
             </Box>
-        </>
-    );
-}
 
-function viewElementsCard(element: Element) {
-    return (
-        <Grid key={element.address}>
-            <Paper sx={{ width: '200px', height: '200px', padding: '.5rem' }}>
-                <div
-                    style={{
-                        width: '100%',
-                        height: '100%',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        justifyContent: 'space-between',
-                    }}
-                >
-                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                        <div>
-                            <strong style={{ whiteSpace: 'nowrap' }}>{element.name}</strong>
-                            <p>{element.invented ? 'invented' : 'not invented'}</p>
-                        </div>
-                        <Image
-                            className={!element.invented ? styles.Uninvented : ''}
-                            src={element.url}
-                            width={80}
-                            height={80}
-                            alt={`picture of ${element.name}`}
-                        />
-                    </div>
-                    <div>
-                        <p>Price: {element.price ? `${element.price} ELE` : 'unkown'}</p>
-                    </div>
-                    <div style={{ textAlign: 'end' }}>T {element.tier}</div>
-                </div>
-            </Paper>
-        </Grid>
+            <ElementModalCard
+                element={openedElement}
+                extendedRecipes={openedElementRecipe}
+                onClose={handleCloseElement}
+            />
+        </>
     );
 }
