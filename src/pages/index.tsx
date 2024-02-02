@@ -103,7 +103,6 @@ export default function Home() {
     }
 
     const fetchNft = useCallback(async () => {
-        console.log('fetchNfts');
         setPageErrors('');
         setLoadingState('loading');
         if (!_.isEmpty(walletAddresses)) {
@@ -184,7 +183,12 @@ export default function Home() {
             }
         } else {
             resetState();
+            setLoadingState('loaded');
         }
+    }, [walletAddresses]);
+
+    useEffect(() => {
+        fetchNft();
     }, [walletAddresses]);
 
     useEffect(() => {
@@ -196,20 +200,22 @@ export default function Home() {
         if (wallet.connected) {
             const walletAddress = wallet.publicKey?.toString();
             if (walletAddress) {
-                setWalletAddresses([walletAddress]);
-                fetchNft();
-                return;
+                setWalletAddresses([]);
+                addWalletAddress(0, walletAddress);
             }
         } else {
-            resetState();
+            setWalletAddresses([]);
         }
-    }, [fetchNft, wallet.publicKey, wallet.connected, wallet.disconnecting]);
-
-    useEffect(() => {
-        fetchNft();
-    }, [fetchNft]);
+    }, [wallet.publicKey, wallet.connected, wallet.disconnecting]);
 
     function resetState() {
+        setRabbits([]);
+        setRabbitsElePerHour(0);
+        setCrystals([]);
+        setCrystalsElePerHour(0);
+        setOtherNFTs([]);
+        setOtherNFTsElePerHour(0);
+
         setLoadingState('loaded');
     }
 
@@ -264,6 +270,7 @@ export default function Home() {
                 label="Wallet Address"
                 id="walletAddress"
                 variant="outlined"
+                value={walletAddresses[index]}
                 error={!_.isEmpty(pageErrors)}
                 onChange={(event) => addWalletAddress(index, event.target.value)}
             />
