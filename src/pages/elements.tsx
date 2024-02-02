@@ -169,13 +169,6 @@ export default function Elments() {
             filtered = filtered.filter((e) => Array.from(tierFilters).includes(e.tier));
         }
 
-        // search
-        if (!_.isNil(search) || !_.isEmpty(search)) {
-            filtered = _.sortBy(filtered, (a: Element) => {
-                return stringSimilarity(a.name.toLowerCase(), search.toLowerCase()) * -1;
-            });
-        }
-
         // ordering
         const field = ordering.split(':')[0];
         const order = ordering.split(':')[1];
@@ -189,6 +182,14 @@ export default function Elments() {
         if (field === 'price') {
             const parts = _.partition(filtered, field);
             filtered = [...parts[0], ...parts[1]];
+        }
+
+        // search
+        if (!_.isNil(search) || !_.isEmpty(search)) {
+            filtered = _.sortBy(
+                filtered,
+                (a: Element) => stringSimilarity(a.name.toLowerCase(), search.toLowerCase()) * -1
+            );
         }
 
         setElementsDisplay(filtered);
