@@ -27,9 +27,15 @@ export function Header(props: Props) {
         <>
             <AppBar position="static">
                 <nav className={styles.Navigation}>
-                    <Link href={'/'}>Home</Link>
-                    <Link href={'/roi'}>Roi Tables</Link>
-                    <Link href={'/elements'}>Elements</Link>
+                    <div className={styles.Note}>
+                        Custom RPC endpoint. Please use in fair way:{' '}
+                        <strong>{process.env.NEXT_PUBLIC_SOLANA_RPC_ENDPOINT}</strong>
+                    </div>
+                    <div className={styles.NavItems}>
+                        <Link href={'/'}>Home</Link>
+                        <Link href={'/roi'}>Roi Tables</Link>
+                        <Link href={'/elements'}>Elements</Link>
+                    </div>
                 </nav>
                 <div className={styles.Header}>
                     {props.eleSolPrice && props.eleUsdcPrice ? (

@@ -2,7 +2,7 @@
     min-height: 32px;
     padding: 1rem 2rem;
     display: flex;
-    justify-content: end;
+    justify-content: space-between;
     align-items: center;
     gap: 1rem;
 }
@@ -16,6 +16,16 @@
 .Navigation a:hover {
     background-color: rgb(63, 63, 63);
 }
+
+.Note {}
+
+.NavItems {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+}
+
 
 .Header {
     width: 100%;
