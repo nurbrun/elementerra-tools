@@ -19,7 +19,7 @@ import {
     Typography,
 } from '@mui/material';
 import Grid from '@mui/material/Unstable_Grid2';
-import { Connection } from '@solana/web3.js';
+import { Connection, clusterApiUrl } from '@solana/web3.js';
 import { encode as encodeb58 } from 'bs58';
 import { Helius } from 'helius-sdk';
 import _, { add } from 'lodash';
@@ -33,8 +33,9 @@ import { ELEMENTERRA_PROGRAM_ID } from './_app';
 import styles from '../styles/Elements.module.css';
 import style from 'styled-jsx/style';
 import { ElementCard, ElementModalCard } from '../app/components/ElementCard';
+import { getExtendedRecipe } from '../lib/utils';
 
-const connection = new Connection(process.env.NEXT_PUBLIC_SOLANA_RPC_ENDPOINT!);
+const connection = new Connection(process.env.NEXT_PUBLIC_SOLANA_RPC_ENDPOINT || clusterApiUrl('mainnet-beta'));
 const metaplex = Metaplex.make(connection);
 const helius = new Helius(process.env.NEXT_PUBLIC_HELIUS_API_KEY!);
 export const PADDING_ADDRESS = '11111111111111111111111111111111';
@@ -202,46 +203,8 @@ export default function Elments() {
         }
 
         const element = elementsRecord[openedElementAddress];
-        const receipes: string[][] = [element.recipe];
-        const extendedRecipes: ExtendedRecipe[] = [];
 
-        let sanityCheck = 0;
-
-        while (true) {
-            const lastRecipe = _.last(receipes)!;
-            let nextLevel: string[] = [];
-            const extendedNextLevel: ExtendedRecipe = {};
-
-            for (const item of lastRecipe) {
-                const extendedItem = elementsRecord[item];
-                if (!_.isNil(extendedItem)) {
-                    const elementName = extendedItem.name;
-                    if (!_.has(extendedNextLevel, elementName)) {
-                        extendedNextLevel[elementName] = {
-                            element: extendedItem,
-                            amount: 1,
-                        };
-                    } else {
-                        extendedNextLevel[elementName].amount += 1;
-                    }
-
-                    nextLevel = [...nextLevel, ...extendedItem.recipe.filter((e) => e !== PADDING_ADDRESS)];
-                }
-            }
-
-            extendedRecipes.push(extendedNextLevel);
-
-            if (_.isEmpty(nextLevel)) {
-                break;
-            }
-
-            receipes.push(nextLevel);
-
-            sanityCheck++;
-            if (sanityCheck > 20) {
-                break;
-            }
-        }
+        const extendedRecipes = getExtendedRecipe(element, elementsRecord);
 
         setOpenedElementRecipe(extendedRecipes);
         setOpenedElement(elementsRecord[openedElementAddress]);

@@ -66,24 +66,28 @@ type ElementModalCard = {
 
 function viewExtendedRecipeItem(element: Element, amount: number) {
     return (
-        <>
-            <p style={{ whiteSpace: 'nowrap' }}>
-                {amount} x {element.name}
-            </p>
-        </>
+        <p key={element.address} style={{ whiteSpace: 'nowrap' }}>
+            {amount} x {element.name}
+        </p>
     );
 }
 
 function viewExtendedRecipe(extendedRecipe: ExtendedRecipe, index: number) {
     return (
-        <>
+        <div key={index} style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', alignItems: 'center' }}>
             {index ? 'or' : ''}
             <Paper
-                sx={{ width: '100%', padding: '1rem', display: 'flex', gap: '1rem', justifyContent: 'space-between' }}
+                sx={{
+                    width: '100%',
+                    padding: '1rem',
+                    display: 'flex',
+                    gap: '1rem',
+                    justifyContent: 'space-between',
+                }}
             >
                 {Object.values(extendedRecipe).map(({ element, amount }) => viewExtendedRecipeItem(element, amount))}
             </Paper>
-        </>
+        </div>
     );
 }
 
@@ -114,9 +118,7 @@ export function ElementModalCard(props: ElementModalCard) {
 
                 <br />
 
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', alignItems: 'center' }}>
-                    {props.extendedRecipes?.map(viewExtendedRecipe)}
-                </div>
+                <div>{props.extendedRecipes?.map(viewExtendedRecipe)}</div>
             </Box>
         </Modal>
     );
