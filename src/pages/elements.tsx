@@ -128,7 +128,7 @@ export default function Elments() {
                 const remaningCount = buf.subarray(84, 84 + 2).readInt16LE(); // 84 - 85
                 const chestsAvailable = remaningCount != 0;
 
-                const unkonwn3Hex = buf.subarray(78, 78 + 16).toString('hex');
+                // const unkonwn3Hex = buf.subarray(78, 78 + 16).toString('hex');
 
                 const ingredient1 = encodeb58(buf.subarray(94, 94 + 32)); // 94 - 125
                 const ingredient2 = encodeb58(buf.subarray(126, 126 + 32)); // 126 - 157
