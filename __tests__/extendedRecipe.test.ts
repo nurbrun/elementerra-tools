@@ -3,7 +3,7 @@ import { getExtendedRecipe } from '../src/lib/utils';
 import { RecipeTuple } from '../src/pages/elements';
 import _ from 'lodash';
 
-const elementsRecord = {
+const elementsRecord: any = {
     AqLM9JqF5wv5DZynY8CducahkB7JWPxWpDL29TPRwmNV: {
         address: 'AqLM9JqF5wv5DZynY8CducahkB7JWPxWpDL29TPRwmNV',
         name: 'Air',
@@ -1460,7 +1460,7 @@ const elementsRecord = {
 
 describe('getExtendedRecipe', () => {
     test('getExtendedRecipe T1', () => {
-        const element = _.clone(elementsRecord['8B3cmtrNHzJi2z9HowdEuRowHoRXoVmpyMdytruDvJD5']);
+        const element: any = _.clone(elementsRecord['8B3cmtrNHzJi2z9HowdEuRowHoRXoVmpyMdytruDvJD5']);
 
         const res = getExtendedRecipe(element, elementsRecord);
 
@@ -1472,7 +1472,7 @@ describe('getExtendedRecipe', () => {
     });
 
     test('getExtendedRecipe T3', () => {
-        const element = _.clone(elementsRecord['4apGySpNYbbGQDQdMk3LK7HcttuA5sxcTuHvdqKwS7CN']); // coral
+        const element: any = _.clone(elementsRecord['4apGySpNYbbGQDQdMk3LK7HcttuA5sxcTuHvdqKwS7CN']); // coral
 
         const res = getExtendedRecipe(element, elementsRecord);
 
