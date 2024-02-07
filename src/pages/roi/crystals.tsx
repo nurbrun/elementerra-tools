@@ -39,7 +39,7 @@ export default function RoiCrystalsPage() {
                         </TableHead>
                         <TableBody>
                             {Object.entries(crystalPrices).map(([level, price]) => (
-                                <ViewCrystalRoiRow level={level} price={price} />
+                                <ViewCrystalRoiRow key={level} level={level} price={price} />
                             ))}
                         </TableBody>
                     </Table>
@@ -50,6 +50,7 @@ export default function RoiCrystalsPage() {
 }
 
 type RowProps = {
+    key: string;
     level: string;
     price: number | null;
 };
@@ -73,7 +74,7 @@ function ViewCrystalRoiRow(props: RowProps) {
     }, [props.price, eleSolPrice]);
 
     return (
-        <TableRow key={props.level}>
+        <TableRow key={props.key}>
             <TableCell>{props.level}</TableCell>
             <TableCell>{CRYSTALS_ELE_PER_HOUR[props.level]} ELE/h</TableCell>
             <TableCell>{solPerDay} SOL/d</TableCell>

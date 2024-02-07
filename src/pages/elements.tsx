@@ -137,7 +137,7 @@ export default function Elments() {
         fetchEleSolPrice();
         fetchEleUsdcPrice();
         refetchElements(connection);
-    }, []);
+    }, [refetchElements]);
 
     function handleOrderingChange(event: SelectChangeEvent<Ordering>) {
         event.preventDefault();

@@ -7,7 +7,6 @@ import { Header } from '../../app/components/Header';
 import { useEleSolPriceStore, useRabbitPriceStore } from '../../app/stores/prices';
 import { RabbitLevelInfo, useRabbitLevelInfoStore } from '../../app/stores/rabbitLevels';
 import { useElementsInfoStore } from '../../app/stores/shopElements';
-import { CRYSTALS_ELE_PER_HOUR, RABBITS_ELE_PER_HOUR } from '../../lib/constants';
 import { calculatePrice } from '../../lib/utils/price';
 
 const connection = new Connection(process.env.NEXT_PUBLIC_SOLANA_RPC_ENDPOINT!);
@@ -66,7 +65,12 @@ export default function RoiCrystalsPage() {
                         <TableBody>
                             {rabbitsLevelInfo &&
                                 Object.entries(rabbitsLevelInfo).map(([level, info]) => (
-                                    <ViewRabbitRoiRow level={level} info={info} basePrice={rabbitBasePrice} />
+                                    <ViewRabbitRoiRow
+                                        key={level}
+                                        level={level}
+                                        info={info}
+                                        basePrice={rabbitBasePrice}
+                                    />
                                 ))}
                         </TableBody>
                     </Table>
@@ -77,6 +81,7 @@ export default function RoiCrystalsPage() {
 }
 
 type RowProps = {
+    key: string;
     level: string;
     info: RabbitLevelInfo;
     basePrice: number | null;
@@ -101,7 +106,7 @@ function ViewRabbitRoiRow(props: RowProps) {
     }, [props.basePrice, eleSolPrice]);
 
     return (
-        <TableRow key={props.level}>
+        <TableRow key={props.key}>
             <TableCell>{props.level}</TableCell>
             <TableCell>{props.info.elePerHour} ELE/h</TableCell>
             <TableCell>{solPerDay} SOL/d</TableCell>

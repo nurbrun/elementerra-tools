@@ -2,8 +2,9 @@ import { Box, Modal, Paper, Typography } from '@mui/material';
 import _ from 'lodash';
 import Image from 'next/image';
 
+import { Element } from '../stores/shopElements';
 import { calculatePrice } from '../../lib/utils';
-import { Element, ExtendedRecipe } from '../../pages/elements';
+import { ExtendedRecipe } from '../../pages/elements';
 import styles from '../../styles/Elements.module.css';
 
 type Props = {

@@ -1,7 +1,8 @@
 import { expect, test, describe } from 'vitest';
-import { getExtendedRecipe } from '../src/lib/utils';
-import { RecipeTuple } from '../src/pages/elements';
 import _ from 'lodash';
+
+import { RecipeTuple } from '../src/app/stores/shopElements';
+import { getExtendedRecipe } from '../src/lib/utils';
 
 const elementsRecord: any = {
     AqLM9JqF5wv5DZynY8CducahkB7JWPxWpDL29TPRwmNV: {

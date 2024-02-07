@@ -1,7 +1,8 @@
 import _ from 'lodash';
 
-import { Element, ExtendedRecipe, PADDING_ADDRESS } from '../../pages/elements';
+import { ExtendedRecipe } from '../../pages/elements';
 import { BASE_ELEMENTS } from '../constants/elements';
+import { Element, PADDING_ADDRESS } from '../../app/stores/shopElements';
 
 function recipeOrBase(element: Element): string[] {
     if (BASE_ELEMENTS.includes(element.address)) {
@@ -50,7 +51,6 @@ export function getExtendedRecipe(element: Element, elementsRecord: Record<strin
         }
 
         extendedRecipes.push(extendedNextLevel);
-        
 
         if (allBaseElements(lastRecipe)) {
             break;
