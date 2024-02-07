@@ -51,19 +51,25 @@ export type Element = {
     recipe: RecipeTuple;
     url: string;
     price?: number;
+    forgedCount: number;
+    remaningCount: number;
+    chestsAvailable: boolean;
 };
 
 export type ExtendedRecipe = Record<string, { element: Element; amount: number }>;
 
 type Ordering = 'tier:asc' | 'tier:desc' | 'price:asc' | 'price:desc' | 'name:asc' | 'name:desc';
 
-type Filter = 'all' | 'invented' | 'not invented';
+type Filter = 'all' | 'invented' | 'not invented' | 'chests available' | 'no chests available';
 
 type Props = {};
 
 export default function Elments() {
     const [elementsRecord, setElementsRecord] = useState<Record<string, Element>>({});
     const [elementsDisplay, setElementsDisplay] = useState<Element[]>([]);
+
+    const [eleSolPrice, setEleSolPrice] = useState<number>(0);
+    const [eleUsdcPrice, setEleUsdcPrice] = useState<number>(0);
 
     const [ordering, setOrdering] = useState<Ordering>('tier:asc');
 
@@ -76,6 +82,18 @@ export default function Elments() {
     const [openedElement, setOpenedElement] = useState<Element | undefined>();
     const [openedElementAddress, setOpenedElementAddress] = useState<string | null>(null);
     const [openedElementRecipe, setOpenedElementRecipe] = useState<ExtendedRecipe[]>([]);
+
+    const fetchEleSolPrice = async () => {
+        const res = await fetch('https://price.jup.ag/v4/price?ids=ELE&vsToken=SOL');
+        const body = await res.json();
+        setEleSolPrice(body.data.ELE.price);
+    };
+
+    const fetchEleUsdcPrice = async () => {
+        const res = await fetch('https://price.jup.ag/v4/price?ids=ELE&vsToken=USDC');
+        const body = await res.json();
+        setEleUsdcPrice(body.data.ELE.price);
+    };
 
     const fetchElements = useCallback(async () => {
         const assets = await connection.getProgramAccounts(new PublicKey(ELEMENTERRA_PROGRAM_ID), {
@@ -99,18 +117,27 @@ export default function Elments() {
 
                 // const unkonwn1Hex = buf.subarray(0, 10).toString('hex'); // 0 - 9
                 // const unkonwn2Hex = buf.subarray(10, 42).toString('hex'); // 10 - 41
+
                 const inventorAddress = encodeb58(buf.subarray(42, 42 + 32)); // 42 - 73
                 const invented = inventorAddress !== PADDING_ADDRESS || _.has(BASE_ELEMENTS_PRICES, address);
 
                 const tier = buf.subarray(74, 74 + 1).readInt8(0); // 74
 
-                const ingredient1 = encodeb58(buf.subarray(94, 94 + 32)); // 126 - 157
+                // const padding1 = buf.subarray(75, 75 + 1).toString('hex') // 75 - 76
+                const forgedCount = buf.subarray(76, 76 + 2).readInt16LE(); // 76 - 77
+                const remaningCount = buf.subarray(84, 84 + 2).readInt16LE(); // 84 - 85
+                const chestsAvailable = remaningCount != 0;
+
+                const unkonwn3Hex = buf.subarray(78, 78 + 16).toString('hex');
+
+                const ingredient1 = encodeb58(buf.subarray(94, 94 + 32)); // 94 - 125
                 const ingredient2 = encodeb58(buf.subarray(126, 126 + 32)); // 126 - 157
                 const ingredient3 = encodeb58(buf.subarray(158, 158 + 32)); // 158 - 189
                 const ingredient4 = encodeb58(buf.subarray(190, 190 + 32)); // 190 - 221
                 const recipe: RecipeTuple = [ingredient1, ingredient2, ingredient3, ingredient4];
 
-                // const unkonwn3Hex = buf.subarray(222, 226).toString('hex'); // 222 - 225
+                // const unkonwn4Hex = buf.subarray(222, 226).toString('hex'); // 222 - 225
+
                 const nameRaw = buf
                     .subarray(226, 226 + 16)
                     .filter((n) => n > 31 && n != 33) // not ASCII control character and not "!" character
@@ -129,6 +156,9 @@ export default function Elments() {
                     tier,
                     recipe,
                     url,
+                    forgedCount,
+                    remaningCount,
+                    chestsAvailable,
                 };
             })
             .sort((a: Element, b: Element) => a.tier - b.tier)
@@ -161,6 +191,10 @@ export default function Elments() {
             filtered = _.filter(elements, { invented: true });
         } else if (inventedFilter === 'not invented') {
             filtered = _.filter(elements, { invented: false });
+        } else if (inventedFilter === 'chests available') {
+            filtered = _.filter(elements, { chestsAvailable: true });
+        } else if (inventedFilter === 'no chests available') {
+            filtered = _.filter(elements, { chestsAvailable: false });
         } else {
             filtered = _.clone(elements);
         }
@@ -212,7 +246,9 @@ export default function Elments() {
 
     useEffect(() => {
         fetchElements();
-    }, [fetchElements]);
+        fetchEleSolPrice();
+        fetchEleUsdcPrice();
+    }, []);
 
     function handleOrderingChange(event: SelectChangeEvent<Ordering>) {
         event.preventDefault();
@@ -287,7 +323,7 @@ export default function Elments() {
                     </Select>
                 </FormControl>
                 <FormControl sx={{ minWidth: '150px' }}>
-                    <InputLabel id="inventedFilterLabel">Invented</InputLabel>
+                    <InputLabel id="inventedFilterLabel">Filter</InputLabel>
                     <Select
                         labelId="inventedFilterLabel"
                         aria-label="Invented"
@@ -299,6 +335,8 @@ export default function Elments() {
                         <MenuItem value={'all'}>All</MenuItem>
                         <MenuItem value={'invented'}>Invented</MenuItem>
                         <MenuItem value={'not invented'}>Not Invented</MenuItem>
+                        <MenuItem value={'chests available'}>Chests Available</MenuItem>
+                        <MenuItem value={'no chests available'}>No Chests Available</MenuItem>
                     </Select>
                 </FormControl>
                 <FormControl sx={{ minWidth: '150px' }}>
@@ -318,9 +356,15 @@ export default function Elments() {
             <br />
 
             <Box sx={{ flexGrow: 1 }}>
-                <Grid container spacing={2} gap={2} justifyContent={'center'}>
+                <Grid container spacing={1} gap={1.5} justifyContent={'center'}>
                     {elementsDisplay.map((e) => (
-                        <ElementCard key={e.address} element={e} onOpen={handleOpenElement} />
+                        <ElementCard
+                            key={e.address}
+                            element={e}
+                            eleSolPrice={eleSolPrice}
+                            eleUsdcPrice={eleUsdcPrice}
+                            onOpen={handleOpenElement}
+                        />
                     ))}
                 </Grid>
             </Box>
@@ -328,6 +372,8 @@ export default function Elments() {
             <ElementModalCard
                 element={openedElement}
                 extendedRecipes={openedElementRecipe}
+                eleSolPrice={eleSolPrice}
+                eleUsdcPrice={eleUsdcPrice}
                 onClose={handleCloseElement}
             />
         </>

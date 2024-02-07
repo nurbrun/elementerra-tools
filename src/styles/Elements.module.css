@@ -5,3 +5,12 @@
 .Uninvented {
     filter: grayscale(1);
 }
+
+.PriceContainer {
+    text-align: right;
+}
+
+.Price {
+    display: block;
+    font-size: 0.9rem;
+}

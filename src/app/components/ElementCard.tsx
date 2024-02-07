@@ -1,36 +1,39 @@
 import { Box, Modal, Paper, Typography } from '@mui/material';
+import _ from 'lodash';
 import Image from 'next/image';
 
-import { Element, ExtendedRecipe, PADDING_ADDRESS } from '../../pages/elements';
+import { calculatePrice } from '../../lib/utils';
+import { Element, ExtendedRecipe } from '../../pages/elements';
 import styles from '../../styles/Elements.module.css';
-import _ from 'lodash';
-import { BASE_ELEMENTS } from '../../lib/constants/elements';
-import { useEffect, useState } from 'react';
 
 type Props = {
-    readonly key: string;
+    readonly key?: string;
     readonly element: Element;
-    readonly onOpen: (elementId: string) => void;
+    readonly eleSolPrice: number;
+    readonly eleUsdcPrice: number;
+    readonly onOpen?: (elementId: string) => void;
 };
 
 export function ElementCard(props: Props) {
     return (
         <Paper
             sx={{
-                width: '200px',
-                height: '200px',
+                width: '220px',
+                height: '220px',
                 padding: '.5rem',
                 opacity: '0.8',
                 ':hover': {
                     opacity: 1,
                 },
             }}
-            onClick={() => props.onOpen(props.element.address)}
+            className={props.element.chestsAvailable ? styles.Active : ''}
+            onClick={() => props.onOpen?.(props.element.address)}
         >
             <div
                 style={{
                     width: '100%',
                     height: '100%',
+                    padding: '.5rem',
                     display: 'flex',
                     flexDirection: 'column',
                     justifyContent: 'space-between',
@@ -38,8 +41,11 @@ export function ElementCard(props: Props) {
             >
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                     <div>
-                        <strong style={{ whiteSpace: 'nowrap' }}>{props.element.name}</strong>
+                        <p>
+                            <strong style={{ whiteSpace: 'nowrap' }}>{props.element.name} </strong>T{props.element.tier}
+                        </p>
                         <p>{props.element.invented ? 'invented' : 'not invented'}</p>
+                        {viewChestsCount(props.element)}
                     </div>
                     <Image
                         className={!props.element.invented ? styles.Uninvented : ''}
@@ -49,18 +55,41 @@ export function ElementCard(props: Props) {
                         alt={`picture of ${props.element.name}`}
                     />
                 </div>
-                <div>
-                    <p>Price: {props.element.price ? `${props.element.price} ELE` : 'unkown'}</p>
+
+                <div className={styles.PriceContainer}>
+                    <p className={styles.Price}>{props.element.price ? `${props.element.price} ELE` : 'unkown'}</p>
+                    <p className={styles.Price}>
+                        {props.element.price
+                            ? `${calculatePrice(props.eleSolPrice, props.element.price)} SOL`
+                            : 'unkown'}
+                    </p>
+                    <p className={styles.Price}>
+                        {props.element.price
+                            ? `${calculatePrice(props.eleUsdcPrice, props.element.price)} USDC`
+                            : 'unkown'}
+                    </p>
                 </div>
-                <div style={{ textAlign: 'end' }}>T {props.element.tier}</div>
             </div>
         </Paper>
     );
 }
 
+function viewChestsCount(element?: void | Element | undefined) {
+    if (element?.chestsAvailable) {
+        const total = element.forgedCount + element.remaningCount;
+        return (
+            <div>
+                {element.forgedCount}/{total}
+            </div>
+        );
+    }
+}
+
 type ElementModalCard = {
     readonly element?: Element | void;
     readonly extendedRecipes: ExtendedRecipe[];
+    readonly eleSolPrice: number;
+    readonly eleUsdcPrice: number;
     readonly onClose: () => void;
 };
 
@@ -112,12 +141,53 @@ export function ElementModalCard(props: ElementModalCard) {
                     p: 4,
                 }}
             >
-                <Typography id="modal-modal-title" variant="h6" component="h2">
-                    {props.element?.name} <small>- Recipe and Breakdown</small>
-                </Typography>
+                <div
+                    style={{
+                        width: '100%',
+                        height: '100%',
+                        padding: '.5rem',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        justifyContent: 'space-between',
+                    }}
+                >
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <div>
+                            <Typography id="modal-modal-title" variant="h6" component="h2">
+                                {props.element?.name} <small>- T{props.element?.tier}</small>
+                            </Typography>
+
+                            <p>{props.element?.invented ? 'invented' : 'not invented'}</p>
+                            {viewChestsCount(props.element)}
+                        </div>
+                        <Image
+                            className={!props.element?.invented ? styles.Uninvented : ''}
+                            src={props.element?.url || ''}
+                            width={80}
+                            height={80}
+                            alt={`picture of ${props.element?.name}`}
+                        />
+                    </div>
+
+                    <div className={styles.PriceContainer}>
+                        <p className={styles.Price}>
+                            {props.element?.price ? `${props.element?.price} ELE` : 'unkown'}
+                        </p>
+                        <p className={styles.Price}>
+                            {props.element?.price
+                                ? `${calculatePrice(props.eleSolPrice, props.element?.price)} SOL`
+                                : 'unkown'}
+                        </p>
+                        <p className={styles.Price}>
+                            {props.element?.price
+                                ? `${calculatePrice(props.eleUsdcPrice, props.element?.price)} USDC`
+                                : 'unkown'}
+                        </p>
+                    </div>
+                </div>
 
                 <br />
-
+                <p>Recipe and Breakdown:</p>
                 <div>{props.extendedRecipes?.map(viewExtendedRecipe)}</div>
             </Box>
         </Modal>
