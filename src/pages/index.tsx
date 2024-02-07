@@ -2,7 +2,6 @@ import { Metaplex, PublicKey } from '@metaplex-foundation/js';
 import {
     AppBar,
     Box,
-    Button,
     FormControl,
     InputLabel,
     MenuItem,
@@ -23,20 +22,16 @@ import { DAS, Helius } from 'helius-sdk';
 import _ from 'lodash';
 import { useCallback, useEffect, useState } from 'react';
 
+import Head from 'next/head';
 import { CrystalsTable } from '../app/components/CrystalsTable';
 import { Header } from '../app/components/Header';
-import { RabbitsTable } from '../app/components/RabbitsTable';
-import { CRYSTALS_ELE_PER_HOUR, RABBITS_ELE_PER_HOUR } from '../lib/constants';
-import {
-    ELEMENTERRA_CRYSTALS_COLLECTION,
-    ELEMENTERRA_ELEMENTS_COLLECTION,
-    ELEMENTERRA_RABBITS_COLLECTION,
-} from './_app';
-import styles from '../styles/Home.module.css';
-import Head from 'next/head';
-import { NextPage } from 'next';
-import { OTHER_STAKABLE_NFT_COLLECTIONS } from '../lib/constants/otherNfts';
 import { OtherNftsTable } from '../app/components/OtherNftsTable';
+import { RabbitsTable } from '../app/components/RabbitsTable';
+import { useEleSolPriceStore, useEleUsdcPriceStore } from '../app/stores/prices';
+import { CRYSTALS_ELE_PER_HOUR, RABBITS_ELE_PER_HOUR } from '../lib/constants';
+import { OTHER_STAKABLE_NFT_COLLECTIONS } from '../lib/constants/otherNfts';
+import styles from '../styles/Home.module.css';
+import { ELEMENTERRA_CRYSTALS_COLLECTION, ELEMENTERRA_RABBITS_COLLECTION } from './_app';
 
 export type Stakable = {
     nft: DAS.GetAssetResponse;
@@ -55,7 +50,6 @@ export default function Home() {
     const wallet = useWallet();
 
     const [walletAddresses, setWalletAddresses] = useState<string[]>([]);
-    // const [walletAddress, setWalletAddress] = useState<string>();
 
     const [rabbits, setRabbits] = useState<Stakable[]>([]);
     const [crystals, setCrystals] = useState<Stakable[]>([]);
@@ -65,25 +59,15 @@ export default function Home() {
     const [crystalsElePerHour, setCrystalsElePerHour] = useState<number>(0);
     const [otherNFTsElePerHour, setOtherNFTsElePerHour] = useState<number>(0);
 
-    const [eleSolPrice, setEleSolPrice] = useState<number>(0);
-    const [eleUsdcPrice, setEleUsdcPrice] = useState<number>(0);
+    const eleSolPrice = useEleSolPriceStore((state) => state.price);
+    const refreshEleSolPrice = useEleSolPriceStore((state) => state.fetch);
+    const eleUsdcPrice = useEleUsdcPriceStore((state) => state.price);
+    const refreshEleUsdcPrice = useEleUsdcPriceStore((state) => state.fetch);
 
     const [timeframe, setTimeframe] = useState<number>(1);
 
     const [pageErrors, setPageErrors] = useState<string>('');
     const [loadingState, setLoadingState] = useState<LoadinState>('initial');
-
-    const fetchEleSolPrice = async () => {
-        const res = await fetch('https://price.jup.ag/v4/price?ids=ELE&vsToken=SOL');
-        const body = await res.json();
-        setEleSolPrice(body.data.ELE.price);
-    };
-
-    const fetchEleUsdcPrice = async () => {
-        const res = await fetch('https://price.jup.ag/v4/price?ids=ELE&vsToken=USDC');
-        const body = await res.json();
-        setEleUsdcPrice(body.data.ELE.price);
-    };
 
     async function getRabbitLevel(rabbit: DAS.GetAssetResponse): Promise<number> {
         const metadataAddress = metaplex
@@ -192,8 +176,8 @@ export default function Home() {
     }, [walletAddresses]);
 
     useEffect(() => {
-        fetchEleSolPrice();
-        fetchEleUsdcPrice();
+        refreshEleSolPrice();
+        refreshEleUsdcPrice();
     }, []);
 
     useEffect(() => {
@@ -220,9 +204,7 @@ export default function Home() {
     }
 
     async function refreshAll() {
-        await fetchEleSolPrice();
-        await fetchEleUsdcPrice();
-        await fetchNft();
+        return Promise.all([refreshEleSolPrice(), refreshEleUsdcPrice(), fetchNft()]);
     }
 
     function addWalletAddress(index: number, walletAddress: string) {

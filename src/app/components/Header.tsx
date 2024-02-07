@@ -1,26 +1,14 @@
-import { Refresh } from '@mui/icons-material';
-import { AppBar, IconButton } from '@mui/material';
+import { AppBar } from '@mui/material';
 import _ from 'lodash';
+import Link from 'next/link';
 
 import styles from '../../styles/Header.module.css';
-import dynamic from 'next/dynamic';
-import Link from 'next/link';
 
 type Props = {
     readonly eleSolPrice?: number;
     readonly eleUsdcPrice?: number;
     readonly refresh?: () => void;
 };
-
-const WalletDisconnectButtonDynamic = dynamic(
-    async () => (await import('@solana/wallet-adapter-react-ui')).WalletDisconnectButton,
-    { ssr: false }
-);
-
-const WalletMultiButtonDynamic = dynamic(
-    async () => (await import('@solana/wallet-adapter-react-ui')).WalletMultiButton,
-    { ssr: false }
-);
 
 export function Header(props: Props) {
     return (
@@ -46,21 +34,6 @@ export function Header(props: Props) {
                     ) : (
                         <div></div>
                     )}
-
-                    <div className={styles.walletButtons}>
-                        <div className={styles.Warning}>
-                            <h3>Do NOT connect your Wallet if you do not know nedrise!</h3>
-                        </div>
-                        <WalletMultiButtonDynamic />
-                        <WalletDisconnectButtonDynamic />
-                        {props.refresh ? (
-                            <IconButton aria-label="refresh" onClick={props.refresh}>
-                                <Refresh />
-                            </IconButton>
-                        ) : (
-                            <div></div>
-                        )}
-                    </div>
                 </div>
             </AppBar>
         </>

@@ -1,60 +1,29 @@
-import { Metaplex, PublicKey } from '@metaplex-foundation/js';
+import { Metaplex } from '@metaplex-foundation/js';
 import {
     Box,
-    Button,
     Checkbox,
     FormControl,
     FormControlLabel,
     FormGroup,
-    FormLabel,
     InputLabel,
     MenuItem,
-    Modal,
-    Paper,
-    Radio,
-    RadioGroup,
     Select,
     SelectChangeEvent,
     TextField,
-    Typography,
 } from '@mui/material';
 import Grid from '@mui/material/Unstable_Grid2';
 import { Connection, clusterApiUrl } from '@solana/web3.js';
-import { encode as encodeb58 } from 'bs58';
 import { Helius } from 'helius-sdk';
-import _, { add } from 'lodash';
-import Image from 'next/image';
-import { ChangeEvent, useCallback, useEffect, useState } from 'react';
+import _ from 'lodash';
+import { ChangeEvent, useEffect, useState } from 'react';
 import { stringSimilarity } from 'string-similarity-js';
 
-import { Header } from '../app/components/Header';
-import { BASE_ELEMENTS, BASE_ELEMENTS_PRICES } from '../lib/constants/elements';
-import { ELEMENTERRA_PROGRAM_ID } from './_app';
-import styles from '../styles/Elements.module.css';
-import style from 'styled-jsx/style';
 import { ElementCard, ElementModalCard } from '../app/components/ElementCard';
+import { Header } from '../app/components/Header';
+import { Element, useElementsInfoStore } from '../app/stores/shopElements';
 import { getExtendedRecipe } from '../lib/utils';
 
 const connection = new Connection(process.env.NEXT_PUBLIC_SOLANA_RPC_ENDPOINT || clusterApiUrl('mainnet-beta'));
-const metaplex = Metaplex.make(connection);
-const helius = new Helius(process.env.NEXT_PUBLIC_HELIUS_API_KEY!);
-export const PADDING_ADDRESS = '11111111111111111111111111111111';
-
-export type RecipeTuple = [string, string, string, string];
-
-export type Element = {
-    address: string;
-    name: string;
-    inventorAddress: string;
-    invented: boolean;
-    tier: number;
-    recipe: RecipeTuple;
-    url: string;
-    price?: number;
-    forgedCount: number;
-    remaningCount: number;
-    chestsAvailable: boolean;
-};
 
 export type ExtendedRecipe = Record<string, { element: Element; amount: number }>;
 
@@ -65,7 +34,10 @@ type Filter = 'all' | 'invented' | 'not invented' | 'chests available' | 'no che
 type Props = {};
 
 export default function Elments() {
-    const [elementsRecord, setElementsRecord] = useState<Record<string, Element>>({});
+    const elements = useElementsInfoStore((state) => state.elements);
+    const elementsRecord = useElementsInfoStore((state) => state.elementsRecord);
+    const refetchElements = useElementsInfoStore((state) => state.fetch);
+
     const [elementsDisplay, setElementsDisplay] = useState<Element[]>([]);
 
     const [eleSolPrice, setEleSolPrice] = useState<number>(0);
@@ -95,92 +67,9 @@ export default function Elments() {
         setEleUsdcPrice(body.data.ELE.price);
     };
 
-    const fetchElements = useCallback(async () => {
-        const assets = await connection.getProgramAccounts(new PublicKey(ELEMENTERRA_PROGRAM_ID), {
-            filters: [{ memcmp: { offset: 0, bytes: 'Qhcg1qqD1g9' } }],
-        });
-
-        const prices = _.clone(BASE_ELEMENTS_PRICES);
-
-        function getPrice(address: string): number | undefined {
-            const foundPrice = prices[address];
-            if (!_.isNil(foundPrice)) {
-                return foundPrice;
-            }
-        }
-
-        const elements: Element[] = assets
-            .map((e) => {
-                const buf = e.account.data;
-
-                const address = e.pubkey.toString();
-
-                // const unkonwn1Hex = buf.subarray(0, 10).toString('hex'); // 0 - 9
-                // const unkonwn2Hex = buf.subarray(10, 42).toString('hex'); // 10 - 41
-
-                const inventorAddress = encodeb58(buf.subarray(42, 42 + 32)); // 42 - 73
-                const invented = inventorAddress !== PADDING_ADDRESS || _.has(BASE_ELEMENTS_PRICES, address);
-
-                const tier = buf.subarray(74, 74 + 1).readInt8(0); // 74
-
-                // const padding1 = buf.subarray(75, 75 + 1).toString('hex') // 75 - 76
-                const forgedCount = buf.subarray(76, 76 + 2).readInt16LE(); // 76 - 77
-                const remaningCount = buf.subarray(84, 84 + 2).readInt16LE(); // 84 - 85
-                const chestsAvailable = remaningCount != 0;
-
-                // const unkonwn3Hex = buf.subarray(78, 78 + 16).toString('hex');
-
-                const ingredient1 = encodeb58(buf.subarray(94, 94 + 32)); // 94 - 125
-                const ingredient2 = encodeb58(buf.subarray(126, 126 + 32)); // 126 - 157
-                const ingredient3 = encodeb58(buf.subarray(158, 158 + 32)); // 158 - 189
-                const ingredient4 = encodeb58(buf.subarray(190, 190 + 32)); // 190 - 221
-                const recipe: RecipeTuple = [ingredient1, ingredient2, ingredient3, ingredient4];
-
-                // const unkonwn4Hex = buf.subarray(222, 226).toString('hex'); // 222 - 225
-
-                const nameRaw = buf
-                    .subarray(226, 226 + 16)
-                    .filter((n) => n > 31 && n != 33) // not ASCII control character and not "!" character
-                    .toString()
-                    .trimEnd(); // 226 - ?
-
-                const name = nameRaw.replaceAll(/([a-zA-Z])([A-Z])/g, '$1 $2');
-                const nameKebab = nameRaw.replaceAll(/([a-zA-Z0-9])([A-Z])/g, '$1-$2').toLowerCase();
-                const url = `https://elementerra-mainnet.s3.us-east-1.amazonaws.com/transparent/${nameKebab}.png`;
-
-                return {
-                    address,
-                    name,
-                    inventorAddress,
-                    invented,
-                    tier,
-                    recipe,
-                    url,
-                    forgedCount,
-                    remaningCount,
-                    chestsAvailable,
-                };
-            })
-            .sort((a: Element, b: Element) => a.tier - b.tier)
-            .map((e: Element) => {
-                let price = 0;
-                const foundPrice = getPrice(e.address);
-                if (!_.isNil(foundPrice)) {
-                    price = foundPrice;
-                } else {
-                    price = _.sum(e.recipe.map((i) => getPrice(i)));
-                    prices[e.address] = price;
-                }
-
-                return {
-                    ...e,
-                    price,
-                };
-            });
-
-        setElementsRecord(Object.fromEntries(elements.map((e) => [e.address, e])));
-        setElementsDisplay(elements);
-    }, []);
+    useEffect(() => {
+        setElementsDisplay(_.cloneDeep(elements));
+    }, [elements]);
 
     useEffect(() => {
         const elements = Object.values(elementsRecord);
@@ -245,9 +134,9 @@ export default function Elments() {
     }, [openedElementAddress, elementsRecord]);
 
     useEffect(() => {
-        fetchElements();
         fetchEleSolPrice();
         fetchEleUsdcPrice();
+        refetchElements(connection);
     }, []);
 
     function handleOrderingChange(event: SelectChangeEvent<Ordering>) {
