@@ -31,12 +31,8 @@ type PricesStore = {
     fetch: () => Promise<void>;
 };
 
-async function fetchCrystalPrice(level: number | string, limit?: number) {
-    let params = `?attributes=[[{"traitType":"level", "value":"${level}"}]]&listingAggMode=true`;
-    if (!_.isNil(limit)) {
-        params = params + `&limit=${limit}`;
-    }
-    const res = await fetch('https://api-mainnet.magiceden.dev/v2/collections/elementerra_crystals/listings' + params);
+async function fetchCrystalPrice(level: number | string) {
+    const res = await fetch(`https://elementerra.line27.de/nft-prices/elementerra_crystals/` + level);
     return res.json();
 }
 
@@ -47,9 +43,8 @@ export const useCrystalPricesStore = create<PricesStore>((set, get) => ({
         const prices: Record<string, number | null> = Object.fromEntries(crystalLevels.map((level) => [level, null]));
 
         for (const level of crystalLevels) {
-            const res = await fetchCrystalPrice(level, 1);
-            const first: any = _.first(res);
-            prices[level] = first?.price;
+            const res = await fetchCrystalPrice(level);
+            prices[level] = res.priceInSol;
         }
         set({ prices });
     },
@@ -58,11 +53,8 @@ export const useCrystalPricesStore = create<PricesStore>((set, get) => ({
 export const useRabbitPriceStore = create<PriceStore>((set, get) => ({
     price: 0,
     fetch: async () => {
-        const res = await fetch(
-            'https://api-mainnet.magiceden.dev/v2/collections/elementerra_rabbits/listings?limit=1'
-        );
+        const res = await fetch('https://elementerra.line27.de/nft-prices/elementerra_rabbits/0');
         const body = await res.json();
-        const first: any = _.first(body);
-        set({ price: first?.price });
+        set({ price: body.priceInSol });
     },
 }));

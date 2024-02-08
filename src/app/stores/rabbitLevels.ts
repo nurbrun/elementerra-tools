@@ -5,13 +5,14 @@ import { RAW_RABBIT_LEVEL_INFO } from '../../lib/constants';
 import { Element } from './shopElements';
 
 export type RabbitLevelInfo = {
-    elementToBurn: string | null;
     bonus: number;
-    eleToBurn: number;
     tier: number;
     reward?: number;
-    eleToBurnSum: number;
     elePerHour: number;
+    elementToBurn: string | null;
+    eleToBurn: number;
+    levelCost: number | null;
+    totalLevelCost: number | null;
 };
 
 type RabbitLevelInfoState = {
@@ -27,29 +28,53 @@ export const useRabbitLevelInfoStore = create<RabbitLevelInfoState>((set) => ({
 
         const res = [];
 
-        let eleToBurnRunning = 0;
+        let totalLevelCost = 0;
         let elePerHourRunning = 0;
 
+        let missingInfo = false;
+
         for (const rawInfo of rawRabbitLevelInfo) {
-            const eleToBurnSum = rawInfo.eleToBurn + eleToBurnRunning;
-            let elementCost = 0;
+            let elementCost;
+            let levelCost = null;
+
             if (!_.isNil(rawInfo.elementToBurn)) {
-                elementCost =
-                    elements.find((e) => e.name.toLowerCase() === rawInfo.elementToBurn?.toLowerCase())?.price || 0;
+                elementCost = elements.find(
+                    (e) => e.name.toLowerCase() === rawInfo.elementToBurn?.toLowerCase()
+                )?.price;
+            } else {
+                elementCost = 0;
             }
 
-            res.push({
-                ...rawInfo,
-                ...{
-                    eleToBurnSum,
-                    elePerHour: rawInfo.bonus + elePerHourRunning,
-                    totalEleToBurn: eleToBurnSum + elementCost,
-                },
-            });
-            
-            eleToBurnRunning += rawInfo.eleToBurn;
+            if (elementCost !== undefined) {
+                levelCost = rawInfo.eleToBurn + elementCost;
+                totalLevelCost += levelCost;
+            } else {
+                missingInfo = true;
+            }
+
             elePerHourRunning += rawInfo.bonus;
+
+            if (missingInfo) {
+                res.push({
+                    ...rawInfo,
+                    ...{
+                        elePerHour: elePerHourRunning,
+                        levelCost: null,
+                        totalLevelCost: null,
+                    },
+                });
+            } else {
+                res.push({
+                    ...rawInfo,
+                    ...{
+                        elePerHour: elePerHourRunning,
+                        levelCost,
+                        totalLevelCost,
+                    },
+                });
+            }
         }
+
         set({
             rabbitLevelInfo: res,
         });

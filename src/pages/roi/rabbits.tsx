@@ -56,9 +56,11 @@ export default function RoiCrystalsPage() {
                                 <TableCell>Rabbit LvL</TableCell>
                                 <TableCell>ELE/h</TableCell>
                                 <TableCell>SOL/d</TableCell>
-                                <TableCell>Lvl Cost in ELE</TableCell>
-                                <TableCell>Lvl Cost SUM in ELE</TableCell>
-                                <TableCell>FP + Lvl Cost SUM in SOL</TableCell>
+                                <TableCell>Element to burn</TableCell>
+                                <TableCell>ELE to burn</TableCell>
+                                <TableCell>Lvl Cost</TableCell>
+                                <TableCell>Lvl Cost running</TableCell>
+                                <TableCell>FP + Lvl Cost running in SOL</TableCell>
                                 <TableCell>ROI in Days</TableCell>
                             </TableRow>
                         </TableHead>
@@ -97,11 +99,17 @@ function ViewRabbitRoiRow(props: RowProps) {
     useEffect(() => {
         if (!_.isNil(props.basePrice) && !_.isNil(eleSolPrice)) {
             const perDay = calculatePrice(eleSolPrice, props.info.elePerHour * 24);
-            const fpAndLvlCost = props.basePrice + calculatePrice(eleSolPrice, props.info.eleToBurnSum);
-
             setSolPerDay(perDay);
-            setFpAndLvlCostInSol(calculatePrice(1, fpAndLvlCost));
-            setRoi(calculatePrice(1, fpAndLvlCost / perDay));
+
+            if (!_.isNil(props.info.totalLevelCost)) {
+                const fpAndLvlCost = props.basePrice + calculatePrice(eleSolPrice, props.info.totalLevelCost);
+
+                setFpAndLvlCostInSol(calculatePrice(1, fpAndLvlCost));
+                setRoi(calculatePrice(1, fpAndLvlCost / perDay));
+            } else {
+                setFpAndLvlCostInSol(NaN);
+                setRoi(NaN);
+            }
         }
     }, [props.basePrice, eleSolPrice]);
 
@@ -110,10 +118,12 @@ function ViewRabbitRoiRow(props: RowProps) {
             <TableCell>{props.level}</TableCell>
             <TableCell>{props.info.elePerHour} ELE/h</TableCell>
             <TableCell>{solPerDay} SOL/d</TableCell>
+            <TableCell>{props.info.elementToBurn}</TableCell>
             <TableCell>{props.info.eleToBurn}</TableCell>
-            <TableCell>{props.info.eleToBurnSum}</TableCell>
-            <TableCell>{fpAndLvlCostInSol} SOL</TableCell>
-            <TableCell>{_.round(roi, 2)}</TableCell>
+            <TableCell>{props.info.levelCost}</TableCell>
+            <TableCell>{props.info.totalLevelCost}</TableCell>
+            <TableCell>{fpAndLvlCostInSol ? fpAndLvlCostInSol + ' SOL' : 'unkown'}</TableCell>
+            <TableCell>{roi ? _.round(roi, 2) + ' Days' : 'unkown'}</TableCell>
         </TableRow>
     );
 }
