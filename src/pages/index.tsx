@@ -268,7 +268,7 @@ export default function Home() {
             </Head>
 
             <div className={styles.container}>
-                <Header eleSolPrice={eleSolPrice} eleUsdcPrice={eleUsdcPrice} refresh={refreshAll} />
+                <Header />
 
                 <main className={styles.main}>
                     <Box
