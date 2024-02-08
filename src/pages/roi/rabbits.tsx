@@ -83,7 +83,6 @@ export default function RoiCrystalsPage() {
 }
 
 type RowProps = {
-    key: string;
     level: string;
     info: RabbitLevelInfo;
     basePrice: number | null;
@@ -114,7 +113,7 @@ function ViewRabbitRoiRow(props: RowProps) {
     }, [props.basePrice, eleSolPrice]);
 
     return (
-        <TableRow key={props.key}>
+        <TableRow key={props.level}>
             <TableCell>{props.level}</TableCell>
             <TableCell>{props.info.elePerHour} ELE/h</TableCell>
             <TableCell>{solPerDay} SOL/d</TableCell>

@@ -40,13 +40,18 @@ export const useCrystalPricesStore = create<PricesStore>((set, get) => ({
     prices: {},
     fetch: async () => {
         const crystalLevels = Object.keys(CRYSTALS_ELE_PER_HOUR);
-        const prices: Record<string, number | null> = Object.fromEntries(crystalLevels.map((level) => [level, null]));
 
         for (const level of crystalLevels) {
             const res = await fetchCrystalPrice(level);
-            prices[level] = res.priceInSol;
+            set((state) => ({
+                prices: {
+                    ...state.prices,
+                    ...{
+                        [level]: res.priceInSol,
+                    },
+                },
+            }));
         }
-        set({ prices });
     },
 }));
 

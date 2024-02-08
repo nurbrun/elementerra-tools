@@ -15,9 +15,14 @@ export default function RoiCrystalsPage() {
     const fetchCrystalPrices = useCrystalPricesStore((state) => state.fetch);
 
     useEffect(() => {
+        if (!_.isEmpty(Object.keys(crystalPrices))) {
+            setLoading(false);
+        }
+    }, [crystalPrices]);
+
+    useEffect(() => {
         refreshEleSolPrice();
         fetchCrystalPrices();
-        setLoading(false);
     }, []);
 
     return (
@@ -50,7 +55,6 @@ export default function RoiCrystalsPage() {
 }
 
 type RowProps = {
-    key: string;
     level: string;
     price: number | null;
 };
@@ -74,7 +78,7 @@ function ViewCrystalRoiRow(props: RowProps) {
     }, [props.price, eleSolPrice]);
 
     return (
-        <TableRow key={props.key}>
+        <TableRow key={props.level}>
             <TableCell>{props.level}</TableCell>
             <TableCell>{CRYSTALS_ELE_PER_HOUR[props.level]} ELE/h</TableCell>
             <TableCell>{solPerDay} SOL/d</TableCell>
