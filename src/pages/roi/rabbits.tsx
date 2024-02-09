@@ -30,14 +30,14 @@ export default function RoiCrystalsPage() {
         if (!_.isEmpty(elements)) {
             fetchRabbitLevelInfo(elements);
         }
-    }, [elements]);
+    }, [elements, fetchRabbitLevelInfo]);
 
     useEffect(() => {
         refreshEleSolPrice();
         fetchRabbitBasePrice();
         refetchElements(connection);
         setLoading(false);
-    }, []);
+    }, [fetchRabbitBasePrice, refetchElements, refreshEleSolPrice]);
 
     return (
         <>
@@ -110,7 +110,7 @@ function ViewRabbitRoiRow(props: RowProps) {
                 setRoi(NaN);
             }
         }
-    }, [props.basePrice, eleSolPrice]);
+    }, [props.basePrice, eleSolPrice, props.info.elePerHour, props.info.totalLevelCost]);
 
     return (
         <TableRow key={props.level}>

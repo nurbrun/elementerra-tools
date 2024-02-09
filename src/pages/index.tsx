@@ -171,14 +171,30 @@ export default function Home() {
         }
     }, [walletAddresses]);
 
+    function addWalletAddress(index: number, walletAddress: string) {
+        let newAddresses = _.clone(walletAddresses);
+
+        if (_.isEmpty(walletAddress)) {
+            newAddresses.splice(index, 1);
+        } else if (!walletAddresses.includes(walletAddress)) {
+            if (walletAddresses.length <= index) {
+                newAddresses.push(walletAddress);
+            } else {
+                newAddresses[index] = walletAddress;
+            }
+        }
+
+        setWalletAddresses(newAddresses);
+    }
+
     useEffect(() => {
         fetchNft();
-    }, [walletAddresses]);
+    }, [walletAddresses, fetchNft]);
 
     useEffect(() => {
         refreshEleSolPrice();
         refreshEleUsdcPrice();
-    }, []);
+    }, [refreshEleSolPrice, refreshEleUsdcPrice]);
 
     useEffect(() => {
         if (wallet.connected) {
@@ -203,24 +219,8 @@ export default function Home() {
         setLoadingState('loaded');
     }
 
-    async function refreshAll() {
-        return Promise.all([refreshEleSolPrice(), refreshEleUsdcPrice(), fetchNft()]);
-    }
-
-    function addWalletAddress(index: number, walletAddress: string) {
-        let newAddresses = _.clone(walletAddresses);
-
-        if (_.isEmpty(walletAddress)) {
-            newAddresses.splice(index, 1);
-        } else if (!walletAddresses.includes(walletAddress)) {
-            if (walletAddresses.length <= index) {
-                newAddresses.push(walletAddress);
-            } else {
-                newAddresses[index] = walletAddress;
-            }
-        }
-
-        setWalletAddresses(newAddresses);
+    function handleWalletAddressInput(index: number, address: string) {
+        addWalletAddress(index, address);
     }
 
     function handleTimeframeChange(event: SelectChangeEvent<number>) {
@@ -254,7 +254,7 @@ export default function Home() {
                 variant="outlined"
                 value={walletAddresses[index]}
                 error={!_.isEmpty(pageErrors)}
-                onChange={(event) => addWalletAddress(index, event.target.value)}
+                onChange={(event) => handleWalletAddressInput(index, event.target.value)}
             />
         );
     }

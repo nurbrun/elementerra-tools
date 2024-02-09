@@ -23,7 +23,7 @@ export default function RoiCrystalsPage() {
     useEffect(() => {
         refreshEleSolPrice();
         fetchCrystalPrices();
-    }, []);
+    }, [fetchCrystalPrices, refreshEleSolPrice]);
 
     return (
         <>
@@ -76,7 +76,7 @@ function ViewCrystalRoiRow(props: RowProps) {
             setFpInSol(fp);
             setRoi(_.round(fp / perDay, 2));
         }
-    }, [props.price, eleSolPrice]);
+    }, [props.price, props.level, eleSolPrice]);
 
     return (
         <TableRow key={props.level}>
