@@ -49,34 +49,36 @@ export default function RoiCrystalsPage() {
             {loading ? (
                 <h3>Loading ...</h3>
             ) : (
-                <TableContainer component={Paper} sx={{ padding: '0 1rem' }}>
-                    <Table sx={{ minWidth: 600 }} aria-label="ELE production table">
-                        <TableHead>
-                            <TableRow>
-                                <TableCell>Rabbit LvL</TableCell>
-                                <TableCell>ELE/h</TableCell>
-                                <TableCell>SOL/d</TableCell>
-                                <TableCell>Element to burn</TableCell>
-                                <TableCell>ELE to burn</TableCell>
-                                <TableCell>Lvl Cost</TableCell>
-                                <TableCell>Lvl Cost running</TableCell>
-                                <TableCell>FP + Lvl Cost running in SOL</TableCell>
-                                <TableCell>ROI in Days</TableCell>
-                            </TableRow>
-                        </TableHead>
-                        <TableBody>
-                            {rabbitsLevelInfo &&
-                                Object.entries(rabbitsLevelInfo).map(([level, info]) => (
-                                    <ViewRabbitRoiRow
-                                        key={level}
-                                        level={level}
-                                        info={info}
-                                        basePrice={rabbitBasePrice}
-                                    />
-                                ))}
-                        </TableBody>
-                    </Table>
-                </TableContainer>
+                <Paper sx={{ width: '95%', margin: '0 auto', overflow: 'hidden' }}>
+                    <TableContainer sx={{ maxHeight: '75vh' }}>
+                        <Table sx={{ minWidth: 600 }} stickyHeader aria-label="ELE production table">
+                            <TableHead>
+                                <TableRow>
+                                    <TableCell>Rabbit LvL</TableCell>
+                                    <TableCell>ELE/h</TableCell>
+                                    <TableCell>SOL/d</TableCell>
+                                    <TableCell>Element to burn</TableCell>
+                                    <TableCell>ELE to burn</TableCell>
+                                    <TableCell>Lvl Cost</TableCell>
+                                    <TableCell>Lvl Cost SUM</TableCell>
+                                    <TableCell>FP + Lvl Cost SUM</TableCell>
+                                    <TableCell>ROI in Days</TableCell>
+                                </TableRow>
+                            </TableHead>
+                            <TableBody>
+                                {rabbitsLevelInfo &&
+                                    Object.entries(rabbitsLevelInfo).map(([level, info]) => (
+                                        <ViewRabbitRoiRow
+                                            key={level}
+                                            level={level}
+                                            info={info}
+                                            basePrice={rabbitBasePrice}
+                                        />
+                                    ))}
+                            </TableBody>
+                        </Table>
+                    </TableContainer>
+                </Paper>
             )}
         </>
     );
@@ -118,9 +120,9 @@ function ViewRabbitRoiRow(props: RowProps) {
             <TableCell>{props.info.elePerHour} ELE/h</TableCell>
             <TableCell>{solPerDay} SOL/d</TableCell>
             <TableCell>{props.info.elementToBurn}</TableCell>
-            <TableCell>{props.info.eleToBurn}</TableCell>
-            <TableCell>{props.info.levelCost}</TableCell>
-            <TableCell>{props.info.totalLevelCost}</TableCell>
+            <TableCell>{props.info.eleToBurn} ELE</TableCell>
+            <TableCell>{props.info.levelCost ? props.info.levelCost + ' ELE' : 'unkown'}</TableCell>
+            <TableCell>{props.info.totalLevelCost ? props.info.totalLevelCost + ' ELE' : 'unkown'}</TableCell>
             <TableCell>{fpAndLvlCostInSol ? fpAndLvlCostInSol + ' SOL' : 'unkown'}</TableCell>
             <TableCell>{roi ? _.round(roi, 2) + ' Days' : 'unkown'}</TableCell>
         </TableRow>
