@@ -35,6 +35,7 @@ export function Header() {
                         <Link href={'/invent'}>Invent</Link>
                         <Link href={'/roi'}>Roi Tables</Link>
                         <Link href={'/elements'}>Elements</Link>
+                        <Link href={'/feed'}>Forging Feed</Link>
                     </div>
                 </nav>
                 <div className={styles.Header}>
