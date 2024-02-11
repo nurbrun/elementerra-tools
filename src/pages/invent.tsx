@@ -1,3 +1,5 @@
+import { Button } from '@mui/base';
+import { Delete } from '@mui/icons-material';
 import {
     Grid,
     Paper,
@@ -8,16 +10,17 @@ import {
     TableHead,
     TableRow,
     TextField,
+    Toolbar,
+    Typography,
 } from '@mui/material';
+import { Box } from '@mui/system';
 import { Connection, clusterApiUrl } from '@solana/web3.js';
 import _ from 'lodash';
 import Image from 'next/image';
 import { useEffect, useState } from 'react';
 import { Header } from '../app/components/Header';
 import { Element, useElementsInfoStore } from '../app/stores/shopElements';
-import { Box, display } from '@mui/system';
-import { Button, Tab } from '@mui/base';
-import { Delete, Remove } from '@mui/icons-material';
+import styles from '../styles/Invent.module.css';
 
 const connection = new Connection(process.env.NEXT_PUBLIC_SOLANA_RPC_ENDPOINT || clusterApiUrl('mainnet-beta'));
 
@@ -39,9 +42,9 @@ export default function InventPage() {
     const [elementsToGuess, setElementsToGuess] = useState<ElementToGuess[]>([]);
 
     const [suggestionsLoading, setSuggestionsLoading] = useState<'none' | 'loading' | 'loaded'>('none');
-    const [recipesToTry, setRecipesToTry] = useState<string[][]>();
+    const [recipesToTry, setRecipesToTry] = useState<Element[][]>();
     const [recipesToTryAmount, setRecipesToTryAmount] = useState<number>();
-    const [alreadyTriedRecipes, setAlreadyTriedRecipes] = useState<string[][]>();
+    const [alreadyTriedRecipes, setAlreadyTriedRecipes] = useState<Element[][]>();
 
     useEffect(() => {
         if (!_.isNil(elements) && !_.isEmpty(elements)) {
@@ -131,9 +134,16 @@ export default function InventPage() {
         });
         const body = await res.json();
 
-        setRecipesToTry(body.possibilities);
+        const possibilities = body.possibilities.map((p: string[]) =>
+            p.map((el) => elements.find((e) => e.name.replaceAll(' ', '').toLowerCase() === el))
+        );
+        const alreadyTried = body.alreadyTried.map((p: string[]) =>
+            p.map((el) => elements.find((e) => e.name.replaceAll(' ', '').toLowerCase() === el))
+        );
+
+        setRecipesToTry(possibilities);
         setRecipesToTryAmount(body.numberOfPossibilies);
-        setAlreadyTriedRecipes(body.alreadyTried);
+        setAlreadyTriedRecipes(alreadyTried);
         setSuggestionsLoading('loaded');
     }
 
@@ -191,11 +201,13 @@ export default function InventPage() {
                     <TableContainer component={Paper}>
                         <Table sx={{ minWidth: 600 }}>
                             <TableHead>
-                                <TableCell>Element</TableCell>
-                                <TableCell>Tier</TableCell>
-                                <TableCell>Minimum</TableCell>
-                                <TableCell>Maximum</TableCell>
-                                <TableCell></TableCell>
+                                <TableRow>
+                                    <TableCell>Element</TableCell>
+                                    <TableCell>Tier</TableCell>
+                                    <TableCell>Minimum</TableCell>
+                                    <TableCell>Maximum</TableCell>
+                                    <TableCell></TableCell>
+                                </TableRow>
                             </TableHead>
                             <TableBody>
                                 {elementsToGuess.map((e) => (
@@ -231,50 +243,33 @@ export default function InventPage() {
                         <div>Loading ...</div>
                     ) : suggestionsLoading === 'loaded' ? (
                         <>
+                            <Toolbar sx={{}} component={Paper}>
+                                <Typography sx={{}}>
+                                    No one tried these recipes yet. Count: {recipesToTryAmount}
+                                </Typography>
+                            </Toolbar>
                             <TableContainer component={Paper}>
                                 <Table sx={{ minWidth: 600 }}>
-                                    <TableHead>
-                                        <TableCell>Not tried Reciepes</TableCell>
-                                        <TableCell>Count: {recipesToTryAmount}</TableCell>
-                                        <TableCell></TableCell>
-                                        <TableCell></TableCell>
-                                        <TableCell></TableCell>
-                                    </TableHead>
                                     <TableBody>
-                                        {recipesToTry?.map((e, i) => (
-                                            <TableRow key={i}>
-                                                <TableCell></TableCell>
-                                                <TableCell>{e[0]}</TableCell>
-                                                <TableCell>{e[1]}</TableCell>
-                                                <TableCell>{e[2]}</TableCell>
-                                                <TableCell>{e[3]}</TableCell>
-                                            </TableRow>
+                                        {recipesToTry?.map((recipe, i) => (
+                                            <RecipeRow key={i} recipe={recipe} />
                                         ))}
                                     </TableBody>
                                 </Table>
                             </TableContainer>
+                            <br />
+                            <Toolbar sx={{}} component={Paper}>
+                                <Typography sx={{}}>These recipes where already tried</Typography>
+                            </Toolbar>
                             <TableContainer component={Paper}>
                                 <Table sx={{ minWidth: 600 }}>
-                                    <TableHead>
-                                        <TableCell>Already tried Reciepes</TableCell>
-                                        <TableCell></TableCell>
-                                        <TableCell></TableCell>
-                                        <TableCell></TableCell>
-                                        <TableCell></TableCell>
-                                    </TableHead>
                                     <TableBody>
-                                        {alreadyTriedRecipes?.map((e, i) => (
-                                            <TableRow key={i}>
-                                                <TableCell></TableCell>
-                                                <TableCell>{e[0]}</TableCell>
-                                                <TableCell>{e[1]}</TableCell>
-                                                <TableCell>{e[2]}</TableCell>
-                                                <TableCell>{e[3]}</TableCell>
-                                            </TableRow>
+                                        {alreadyTriedRecipes?.map((recipe, i) => (
+                                            <RecipeRow key={i} recipe={recipe} />
                                         ))}
                                     </TableBody>
                                 </Table>
-                            </TableContainer>{' '}
+                            </TableContainer>
                         </>
                     ) : (
                         <></>
@@ -363,6 +358,42 @@ function ElementToGuessTableRow(props: ElementToGuessTableRowProps) {
                     <Delete />
                 </Button>
             </TableCell>
+        </TableRow>
+    );
+}
+
+type RecipeRowProps = {
+    recipe: Element[];
+};
+
+function RecipeRow(props: RecipeRowProps) {
+    return (
+        <TableRow className={styles.RecipeRow}>
+            <TableCell>
+                <div className={styles.RecipeRowCell}>
+                    {props.recipe[0].name}{' '}
+                    <Image src={props.recipe[0].url} alt={props.recipe[0].name} width={24} height={24} />
+                </div>
+            </TableCell>
+            <TableCell>
+                <div className={styles.RecipeRowCell}>
+                    {props.recipe[1].name}
+                    <Image src={props.recipe[1].url} alt={props.recipe[1].name} width={24} height={24} />
+                </div>
+            </TableCell>
+            <TableCell>
+                <div className={styles.RecipeRowCell}>
+                    {props.recipe[2].name}
+                    <Image src={props.recipe[2].url} alt={props.recipe[2].name} width={24} height={24} />
+                </div>
+            </TableCell>
+            <TableCell>
+                <div className={styles.RecipeRowCell}>
+                    {props.recipe[3].name}
+                    <Image src={props.recipe[3].url} alt={props.recipe[3].name} width={24} height={24} />
+                </div>
+            </TableCell>
+            <TableCell>{_.sum(props.recipe.map((r) => r.price))} ELE</TableCell>
         </TableRow>
     );
 }
