@@ -46,6 +46,8 @@ export default function InventPage() {
     const [recipesToTryAmount, setRecipesToTryAmount] = useState<number>();
     const [alreadyTriedRecipes, setAlreadyTriedRecipes] = useState<Element[][]>();
 
+    const [warning, setWarning] = useState<string>('');
+
     useEffect(() => {
         if (!_.isNil(elements) && !_.isEmpty(elements)) {
             let els = _.orderBy(elements, ['tier', 'name'], ['asc', 'asc']);
@@ -69,14 +71,33 @@ export default function InventPage() {
         } else {
             setElementsToPick([]);
         }
-    }, [elementToInvent]);
+    }, [elementToInvent, inventedElements, elementToInvent?.tier]);
+
+    useEffect(() => {
+        const tier = elementToInvent?.tier;
+        if (!_.isNil(tier)) {
+            const requiredTier = tier - 1;
+            const highestSelectedTier = _.max(elementsToGuess.map((e) => e.element.tier)) || 0;
+            if (highestSelectedTier < requiredTier) {
+                setWarning(`Please select at least one tier ${requiredTier} element`);
+            } else {
+                setWarning('');
+            }
+        }
+    }, [elementsToGuess, elementToInvent?.tier]);
+
+    function resetSelection() {
+        setElementToInvent(undefined);
+        setElementsToGuess([]);
+        setWarning('');
+    }
 
     function handleSelectElementToInvent(elementId: string | null) {
         const selected = notInventedElements.find((e) => e.address === elementId);
         if (!_.isNil(selected)) {
             setElementToInvent(selected);
         } else {
-            setElementToInvent(undefined);
+            resetSelection();
         }
     }
 
@@ -196,7 +217,25 @@ export default function InventPage() {
                         ))}
                     </Grid>
 
-                    <br />
+                    <div
+                        style={{
+                            width: '100%',
+                            minHeight: '4rem',
+                            display: 'flex',
+                            justifyContent: 'center',
+                            alignItems: 'center',
+                            gap: '2rem',
+                        }}
+                    >
+                        <Typography color={'orange'}>{warning ? warning : ''}</Typography>
+                        <Button
+                            style={{ minHeight: '3rem' }}
+                            disabled={!_.isEmpty(warning)}
+                            onClick={handleRequestSuggetions}
+                        >
+                            Get suggestions
+                        </Button>
+                    </div>
 
                     <TableContainer component={Paper}>
                         <Table sx={{ minWidth: 600 }}>
@@ -225,19 +264,7 @@ export default function InventPage() {
                         </Table>
                     </TableContainer>
 
-                    <div
-                        style={{
-                            width: '100%',
-                            minHeight: '4rem',
-                            display: 'flex',
-                            justifyContent: 'center',
-                            alignItems: 'center',
-                        }}
-                    >
-                        <Button style={{ minHeight: '3rem' }} onClick={handleRequestSuggetions}>
-                            Get suggestions
-                        </Button>
-                    </div>
+                    <br />
 
                     {suggestionsLoading === 'loading' ? (
                         <div>Loading ...</div>
